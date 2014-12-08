@@ -1,0 +1,13 @@
+Source: linuxmuster-client-servertools
+Section: debian-linuxmuster
+Priority: optional
+Maintainer: Frank Schiebel <frank@linuxmuster.net>
+Build-Depends: debhelper (>= 4.0.0)
+Standards-Version: 3.6.0
+
+Package: linuxmuster-client-servertools
+Architecture: all
+Conflicts: linuxmuster-client-auth
+Depends: linuxmuster-linbo
+Description: linuxmuster serverside scripts for managing a community based ubuntu-cloop
+

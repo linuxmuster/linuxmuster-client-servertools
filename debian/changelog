@@ -1,0 +1,6 @@
+linuxmuster-client-servertools (0.1-babo1) babo; urgency=low
+
+  * initial release
+  * including Jesko Anschuetz cloop-setupscript in a package for better future maintenance
+
+ -- Frank Schiebel <frank@linuxmuster.net>  Mon, 08 Dec 2014 19:22:44 +0200
