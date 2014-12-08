@@ -1,0 +1,103 @@
+echo "##### POSTSYNC BEGIN #####"
+
+# IP-Adresse des Server
+SERVERIP=10.16.1.1
+
+# Raum feststellen. Dieses Skript geht davon aus
+# dass die Rechner Namen der Form
+# raumname-hostname haben, also z.B. cr01-pc18
+RAUM=${HOSTNAME%%-*}
+# wenn der string leer ist, raum auf unknown setzen
+if [ "x${RAUM}" == "x" ]; then 
+    RAUM="unknown"
+fi
+
+# UVZ auf dem Server. Mit diesem Variablen kann 
+# man verschiedene Images bedienen (was bei linux
+# selten nötig ist) 
+PATCHCLASS="ubuntu1204"
+
+# Das Verzeichnis, in dem die Serverpatches
+# im lokalen Clientcache synchronisiert werden.
+PATCHCACHE=/linuxmuster-client/serverpatches
+
+echo ""
+echo "Hostname:      ${HOSTNAME}"
+echo "Raum:          ${RAUM}"
+echo "Patchcache:    ${PATCHCACHE}"
+echo "Patchclass:    ${PATCHCLASS}"
+echo ""
+
+# -----------------------------------------
+# Patchdateien auf das lokale Image rsyncen
+# ----------------------------------------- 
+echo " - getting patchfiles"
+
+# RAUM     -> Raumname
+# HOSTNAME -> Rechnername
+# Verzeichnis anlegen, damit es sicher existiert
+mkdir -p /cache/${PATCHCACHE}
+rsync --progress -r "${SERVERIP}::linbo/linuxmuster-client/${PATCHCLASS}" "/cache/${PATCHCACHE}"
+
+echo " - patching local files"
+
+
+# Patchen fuer common, $RAUM und $HOSTNAME 
+for PATCH_SOURCE in common ${RAUM} ${HOSTNAME}; do
+
+# files
+echo "   - patching files $PATCH_SOURCE to /mnt" 
+if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/${PATCH_SOURCE} ]; then 
+    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/{PATCH_SOURCE}/* /mnt/ 
+fi
+
+# tarpacks
+echo "   - unpacking tarpacks from $PATCH_SOURCE/tarpacks to /mnt" 
+if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/${PATCH_SOURCE}/tarpacks ]; then
+  for pack in /cache/${PATCHCACHE}/${PATCHCLASS}/${PATCH_SOURCE}/tarpacks/*; do
+     echo "     - unpacking: $pack"
+     tar xvzf $pack -C /mnt
+  done
+fi
+
+done
+
+# Hook, um eigene Skripte auszuführen
+if [ -d /mnt/postsync.d ]; then
+    for SCRIPT in /mnt/postsync.d/*
+    do
+        chmod 755 $SCRIPT
+        echo "Executing: $SCRIPT"
+        #$SCRIPT > /dev/null 2>&1
+        $SCRIPT
+        echo " ...done."
+    done
+    rm -rf /mnt/postsync.d
+fi
+
+# -----------------------------------
+# Berechtigungen anpassen, wenn nötig
+# -----------------------------------
+
+echo " - fixing initrd links"
+cd /mnt
+INITRD=$(ls -la | grep initrd.img | grep /boot | awk -F'-> ' '{print $2}' | sed -e "s|^\/||")
+
+if [ "x$INITRD" != "x" ]; then 
+        rm -f /mnt/initrd.img | sed -e "s|^\/||"g
+        ln -s $INITRD initrd.img
+fi
+
+echo " - setting permissions of patched local files"
+
+# printers.conf
+[ -f /mnt/etc/cups/printers.conf ] && chmod 600 /mnt/etc/cups/printers.conf 
+
+# .ssh verzeichnis
+chmod 700 /mnt/root/.ssh/
+chmod 600 /mnt/root/.ssh/authorized_keys
+
+echo "##### POSTSYNC END #####"
+
+
+
