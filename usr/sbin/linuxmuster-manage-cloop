@@ -9,6 +9,8 @@
 
 # Konfiguration lesen
 . /etc/linuxmuster/client-servertools.conf || exit 1
+# Netzwerkparameter linuxmuster.net
+. /var/lib/linuxmuster/network.settings || exit 1
 # Hilfsfunktionen einbinden
 . $CONF_HELPERFUNCTIONS || exit 1
 
@@ -23,9 +25,10 @@ check_startup
 # kann durch Optio -h überschrieben werden
 HWCLASS=$CONF_HWCLASS
 CLOOP_NAME=$CONF_DEFAULT_CLOOP_NAME
+PATCHCLASS=$CONF_DEFAULT_PATCHCLASS
 
 # Optionen verarbeiten
-while getopts ":a:h:c:" opt; do
+while getopts ":a:h:c:p:" opt; do
 case $opt in
     a)
         ACTION=$OPTARG
@@ -35,6 +38,9 @@ case $opt in
         ;;
     c)
         CLOOP_NAME=$OPTARG
+        ;;
+    p)
+        PATCHCLASS=$OPTARG
         ;;
     \?)
         print_help
@@ -50,140 +56,11 @@ auto)
 get-cloop)
     get_remote_cloop $HWCLASS $CLOOP_NAME
     ;;
+configure)
+    configure_cloop $CLOOP_NAME
+    ;;
 *)
     print_help
     ;;
 esac
 
-
-exit 
-
-filestolinbo="${cloopfile} ${cloopfile}.desc ${cloopfile}.info ${cloopfile}.macct ${cloopfile}.torrent ${startconffile} ${postsyncfile}"
-
-# aus dem Postsync-Skript wird die Patchklasse ermittelt.
-
-patchclass=$(grep "PATCHCLASS=" "${postsyncfile}" | cut -d"=" -f2 | sed 's/"//g')
-if [[ ${patchclass} == "" ]]
-then
-	echo "patchclass konnte nicht ermittelt werden. Das liegt vermutlich an einem ungültigen Postsync-File."
-	exit 1
-fi
-echo "Zusammenfassung:"
-echo "----------------"
-echo "start.conf: $startconffile"
-echo "patchclass: $patchclass"
-echo "files to linbo: $filestolinbo"
-
-
-
-# Dateien ins Linboverzeichnis kopieren
-for file in ${filestolinbo}
-do
-  if [[ ! "${file}" == "" ]]
-  then  # wenn eine Datei übergeben worden ist: prüfen, ob sie existiert und ob das Ziel schon existiert und im Fall zur
-	# Sicherheit mit Zeitstempel versehen.
-	if [[ -e "${file}" ]]
-	then
-	  if [[ -e "${CONF_LINBODIR}/${file}" ]]
-	  then
-	      LINDIRBACKUP=1 # Flag für Meldung am Ende
-	      echo -e "${file} existiert. \e[01;33mSicherungskopie...\e[00m"
-	      if rsync -Pa "${CONF_LINBODIR}/${file}" "${CONF_LINBODIR}/${file}".$(date +"%Y%m%d%H%M%S") 
-	      then
-		echo -e "\033[1A\033[11D\e[01;32m...OK. \033[K \e[00m"
-	      else
-		echo -e "\033[1A\033[11D\e[00;31m ...failed \033[K \e[00m"
-	      fi
-	  fi
-        else # wenn es das File NICHT gibt.
-	# Versuche, die Datei vom Server herunterzuladen
-   	    echo "${file} ist lokal nicht vorhanden. Versuche ${file} von ${CONF_CLOOP_SERVER} herunterzuladen..."
-   	    if wget -q ${CONF_CLOOP_SERVER}/${file}
-   	    then
-              echo -e "\e[01;32m...OK.\e[00m"
-            else
-              echo -e "\e[00;31m...failed.\e[00m"
-              if [[ -e "${CONF_LINBODIR}/${file}" ]]
-	      then
-		echo -e "\e[01;32mDie Datei ist allerdings in ${CONF_LINBODIR} schon vorhanden. Wenn das Absicht war, ist alles gut.\e[00m"
-	      fi
-            fi
-	  # prüfe, ob sie jetzt da ist, um weiter zu machen
-          if [[ ! -e ${file} ]]
-	  then
-	    echo -e "\e[00;31m ${file} fehlt zu Installation... bitte Konfiguration überprüfen.\e[00m"
-	  fi
-	fi
-
-	  # Datei kopieren und Rechte anpassen
-	  echo "Kopiere ${file} nach ${CONF_LINBODIR}/"
-	  if rsync -Pa "${file}" "${CONF_LINBODIR}/${file}"
-          then
-	    echo -e "\033[1A\033[11D\e[01;32m...OK. \033[K \e[00m"
-	  else
-	    echo -e "\033[1A\033[11D\e[00;31m ...failed \033[K \e[00m"
-	  fi
-
-	  echo -n "setze Dateirechte von ${file}"
-	  #erst den Besitzer
-	  if chown root:root "${CONF_LINBODIR}/${file}"
-	  then
-	    echo -n -e "\e[01;32m\t...OK.\e[00m"
-	  else
-	    echo -n -e "\e[00;31m...failed\e[00m"
-	  fi
-	  #dann die Zugriffsrechte
-	  if chmod 664 "${CONF_LINBODIR}/${file}"
-	  then
-	    echo -n -e "\e[01;32m\t...OK.\e[00m"
-	  else
-	    echo -n -e "\e[00;31m ...failed\e[00m"
-	  fi
-	  echo -e "\n"
-
-  else
-	# wenn aus welchen Gründen auch immer kein $file übergeben wurde...
-	 echo "nichts zu tun..."
-  fi
-done
-
-
-# Hosts-Datei erstellen
-HOSTS=common/etc/hosts
-SERVERIP=$(cat /etc/hosts | grep -e "^10" | sed 's/\t/ /g' |cut -d" " -f1)
-
-[[ ! -d common/etc ]] && mkdir -p common/etc/
-echo "# Diese Datei wird per postsync gepatcht. Zu bearbeiten ist sie auf dem Server." > ${HOSTS}
-echo "# Pfad: ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass}/${HOSTS}" >> ${HOSTS}
-echo "# HOSTNAME wird im Postsyncskript mit dem echten Namen gepatcht" >> ${HOSTS}
-echo "127.0.0.1    HOSTNAME" >> ${HOSTS}
-echo -e "\n#Die nächste Zeile enthält die Hostnamen so, wie sie auf dem Server eingetragen sind..." >> ${HOSTS}
-
-echo $(cat /etc/hosts | grep -e "^10" | sed "s/${SERVERIP}/#SERVERIP/g")     >> ${HOSTS}
-echo "# damit CUPS zufrieden ist, muss noch diese Zeile hier dazu:" >> ${HOSTS}
-echo "#SERVERIP  server.lokal server.local" >> ${HOSTS}
-
-# Postsync-Baum kopieren... vorher Sicherung erstellen von vorhandenem Verzeichnisbaum
-if [[ -e "${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass}" ]]
-then
-  POSTSYNCBACKUP=1  # Flag für Meldung am Ende.
-  echo -n -e "Postsync-Baum existiert. \e[01;33mSicherungskopie...\e[00m"
-  if mv "${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass}" "${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass}".$(date +"%Y%m%d%H%M%S")
-  then
-    echo -e "\e[01;32m\t...OK.\e[00m"
-  else
-    echo -e "\e[00;31m ...failed\e[00m"
-  fi
-fi
-
-# Verzeichnisbaum erstellen
-mkdir -p "${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass}/common"
-echo "Kopiere Postsync-Baum..."
-rsync -Pa common "${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass}"
-
-# Falls zutreffend, noch die Meldungen ausgeben, ob vorhandene Dateien angefasst wurden...
-[[ "$LINDIRBACKUP" == "1" ]] && echo -e "\e[00;33mEs wurden schon vorhandene Dateien mit Zeitstempel gesichert. Bitte in ${CONF_LINBODIR} nachsehen. \e[00m"
-[[ "$POSTSYNCBACKUP" == "1" ]] && echo -e "\e[00;31mDer ursprüngliche Postsync-Verzeichnisbaum unter ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass} wurde mit Zeitstempel gesichert. Bitte prüfen, ob wichtige Dateien in den aktuellen Baum kopiert werden müssen. \e[00m"
-
-/etc/init.d/linbo-bittorrent restart ${cloopfile} force
-echo -e "\n\n\n\e[01;32mFertig\e[00m"

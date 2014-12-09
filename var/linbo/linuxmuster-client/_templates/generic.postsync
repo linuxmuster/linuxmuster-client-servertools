@@ -1,7 +1,7 @@
 echo "##### POSTSYNC BEGIN #####"
 
-# IP-Adresse des Server
-SERVERIP=10.16.1.1
+# IP-Adresse des Servers
+SERVERIP=$(nslookup dummy 2> /dev/null | head -n 1 | awk -F: '{print $2}' | sed "s/\s*//g")
 
 # Raum feststellen. Dieses Skript geht davon aus
 # dass die Rechner Namen der Form
@@ -15,7 +15,7 @@ fi
 # UVZ auf dem Server. Mit diesem Variablen kann 
 # man verschiedene Images bedienen (was bei linux
 # selten nötig ist) 
-PATCHCLASS="ubuntu1204"
+PATCHCLASS="default"
 
 # Das Verzeichnis, in dem die Serverpatches
 # im lokalen Clientcache synchronisiert werden.
@@ -37,30 +37,59 @@ echo " - getting patchfiles"
 # HOSTNAME -> Rechnername
 # Verzeichnis anlegen, damit es sicher existiert
 mkdir -p /cache/${PATCHCACHE}
-rsync --progress -r "${SERVERIP}::linbo/linuxmuster-client/${PATCHCLASS}" "/cache/${PATCHCACHE}"
+rsync --delete --progress -r "${SERVERIP}::linbo/linuxmuster-client/${PATCHCLASS}" "/cache/${PATCHCACHE}"
 
 echo " - patching local files"
 
 
-# Patchen fuer common, $RAUM und $HOSTNAME 
-for PATCH_SOURCE in common ${RAUM} ${HOSTNAME}; do
 
+# common: Bekommen alle clients der Patchklasse
 # files
-echo "   - patching files $PATCH_SOURCE to /mnt" 
-if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/${PATCH_SOURCE} ]; then 
-    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/{PATCH_SOURCE}/* /mnt/ 
+if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/common ]; then 
+    echo "   - patching common to /mnt" 
+    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/common/* /mnt/ 
 fi
 
 # tarpacks
-echo "   - unpacking tarpacks from $PATCH_SOURCE/tarpacks to /mnt" 
-if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/${PATCH_SOURCE}/tarpacks ]; then
-  for pack in /cache/${PATCHCACHE}/${PATCHCLASS}/${PATCH_SOURCE}/tarpacks/*; do
+if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/common/tarpacks ]; then
+  echo "   - unpacking tarpacks from common/tarpacks to /mnt" 
+  for pack in /cache/${PATCHCACHE}/${PATCHCLASS}/common/tarpacks/*; do
      echo "     - unpacking: $pack"
      tar xvzf $pack -C /mnt
   done
 fi
 
-done
+# Raum: Nur die Clients des Raums
+# files
+if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/${RAUM} ]; then 
+    echo "   - patching ${RAUM} to /mnt" 
+    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/${RAUM}/* /mnt/ 
+fi
+
+# tarpacks
+if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/${RAUM}/tarpacks ]; then
+  echo "   - unpacking tarpacks from ${RAUM}/tarpacks to /mnt" 
+  for pack in /cache/${PATCHCACHE}/${PATCHCLASS}/${RAUM}/tarpacks/*; do
+     echo "     - unpacking: $pack"
+     tar xvzf $pack -C /mnt
+  done
+fi
+
+# Host: Nur der Rechner
+# files
+if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/${HOSTNAME} ]; then 
+    echo "   - patching ${HOSTNAME} to /mnt" 
+    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/${HOSTNAME}/* /mnt/ 
+fi
+
+# tarpacks
+if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/${HOSTNAME}/tarpacks ]; then
+  echo "   - unpacking tarpacks from ${HOSTNAME}/tarpacks to /mnt" 
+  for pack in /cache/${PATCHCACHE}/${PATCHCLASS}/${HOSTNAME}/tarpacks/*; do
+     echo "     - unpacking: $pack"
+     tar xvzf $pack -C /mnt
+  done
+fi
 
 # Hook, um eigene Skripte auszuführen
 if [ -d /mnt/postsync.d ]; then
@@ -87,15 +116,6 @@ if [ "x$INITRD" != "x" ]; then
         rm -f /mnt/initrd.img | sed -e "s|^\/||"g
         ln -s $INITRD initrd.img
 fi
-
-echo " - setting permissions of patched local files"
-
-# printers.conf
-[ -f /mnt/etc/cups/printers.conf ] && chmod 600 /mnt/etc/cups/printers.conf 
-
-# .ssh verzeichnis
-chmod 700 /mnt/root/.ssh/
-chmod 600 /mnt/root/.ssh/authorized_keys
 
 echo "##### POSTSYNC END #####"
 

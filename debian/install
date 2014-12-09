@@ -1,3 +1,4 @@
 usr/sbin/*          /usr/sbin/
-usr/share/*         /usr/share
+usr/share/*         /usr/share/
+var/*               /var/
 etc/*               /etc/

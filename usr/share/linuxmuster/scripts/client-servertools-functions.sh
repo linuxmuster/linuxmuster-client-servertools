@@ -38,14 +38,28 @@ echo -e "${open}$2${close}"
 # Gibt einen Hilfetext aus
 #
 function print_help() {
-cat#  jesko.anschuetz@linuxmuster.net
-#  frank@linuxmuster.net
- <<End-of-help
+cat <<End-of-help
 Anwendung:
     linuxmuster-manage-cloop [-a action]
 Aktionsauswahl:
-    -a auto     Automatischer Modus, versucht das cloop aus dem Netz vollautomatisch zu installieren
-    -a get-cloop Holt ein cloop aus dem Netz
+    -a auto      
+        Automatischer Modus, versucht das cloop aus dem Netz vollautomatisch zu installieren
+    -a get-cloop 
+        Holt ein cloop aus dem Netz und speichert die nötigen dateien in /var/linbo/ ab. 
+        Bei Konflikten mit vorhandenen Dateien wird der Benutzer informiert, es werden
+        keine Daten überschrieben 
+    -a configure  
+        Bereitet ein heruntergeladenes cloop-Dateiset mit einem passenden postsync 
+        Skript zur Synchronisation auf Clients vor
+
+Optionen
+    -h <Hardware-Klasse>  
+        Legt unter verwendung des heruntergeladenen cloops 
+        eine Konfiguration mit dem angegebenen Namen an.
+        Standard ist "ubuntuclient"
+    -c <cloop-Dateiname>
+        Kann bei der Aktion "configure" angegeben werden. Name der 
+        cloop-Datei ohne den Pfad /var/linbo
 End-of-help
 }
 
@@ -66,7 +80,6 @@ function check_startup {
         echo "Das angegebene Linboverzeichnis existiert nicht. Abbruch"
         exit 1
     fi
-
 }
 
 #
@@ -142,4 +155,61 @@ function get_remote_cloop {
             rm -f ${TARGET_FILESET[$key]}
         fi
     done
+}
+
+
+#
+# @Agrunmente
+# $1  Name der cloop-Datei, die eingerichtet werden soll
+#
+function configure_cloop {
+    # Gibt es das Cloop?
+    if [ ! -e $CONF_LINBODIR/$1 ]; then 
+        echo "Cloop Datei nicht gefunden: $CONF_LINBODIR/$1"
+        exit 1
+    fi
+    HWCLASS=${1%.cloop}
+    STARTCONF=$CONF_LINBODIR/start.conf.$HWCLASS
+    if [ ! -e $STARTCONF ]; then 
+        echo "Keine start.conf Vorlage für $HWCLASS gefunden"
+        exit 1
+    fi
+    ts=$(date +%Y%m%d-%H%M%S)
+    cp $STARTCONF ${STARTCONF}.$ts.autobackup
+
+    # start.conf anpassen
+    sed -i "s/\(Server\s*\=\s*\) \(.*\)/\1 $serverip/" $STARTCONF
+    sed -i "s/\(Group\s*\=\s*\) \(.*\)/\1 $HWCLASS/" $STARTCONF
+    sed -i "s/\(BaseImage\s*\=\s*\) \(.*\)/\1 $1/" $STARTCONF
+
+    BITTORRENT_ON=$(grep START_BTTRACK /etc/default/bittorrent  | awk -F= '{print $2}')
+    if [ "x$BITTORRENT_ON" == "x0" ]; then 
+        sed -i "s/\(DownloadType\s*\=\s*\) \(.*\)/\1 rsync/" $STARTCONF
+    fi
+
+
+    # postsync aus vorlage holen
+    POSTSYNC=$CONF_LINBODIR/$1.postsync
+    cp $CONF_GENERIC_POSTSYNC $POSTSYNC
+    mkdir -p /var/linbo/linuxmuster-client/$PATCHCLASS/common/
+    cp -ar /var/linbo/linuxmuster-client/_templates/postsync.d /var/linbo/linuxmuster-client/$PATCHCLASS/common/
+    sed -i "s/\(PATCHCLASS\s*\=\s*\)\(.*\)/\1\"$PATCHCLASS\"/" $POSTSYNC
+
+    # postsync konfiguration anpassen
+
+    # linuxadmin-Passworthash aus der Konfiguration bestimmen und für das postsync Skript bereitstellen
+    PWHASH=$(echo "$CONF_LINUXADMIN_PW" | makepasswd --clearfrom=- --crypt-md5 |awk '{ print $2 }')
+    echo "linuxadmin|$PWHASH" > /var/linbo/linuxmuster-client/$PATCHCLASS/common/passwords
+    
+    # public-key des Server-roots in die authorized keys der client roots
+    mkdir -p  /var/linbo/linuxmuster-client/$PATCHCLASS/common/root/.ssh
+    cat /root/.ssh/id_dsa.pub > /var/linbo/linuxmuster-client/$PATCHCLASS/common/root/.ssh/authorized_keys
+    
+ 
+
+    
+
+    
+    
+
 }

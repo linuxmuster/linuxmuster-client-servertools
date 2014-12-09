@@ -1,0 +1,21 @@
+#!/bin/sh
+if [ -e /mnt/etc/fstab ]; then
+    echo " - fixing fstab"
+    swap_part=$(fdisk -l | grep swap | awk '{print $1}')
+    swap_fstab=$(grep swap /mnt/etc/fstab | awk '{print $1}')
+    if [ $swap_part != $swap_fstab ]; then
+            echo "      Swap:          $swap_part"
+            echo "      Swap in fstab: $swap_fstab"
+            sed -i "s|^\(.*\)\(none\s*swap\)\(.*\)|${swap_part} \2 \3|" /mnt/etc/fstab
+    fi
+    for i in $(grep ^/dev /mnt/etc/fstab | awk '{print $1}'); do
+        if [ ! -b $i ]; then
+                dev=$(echo $i | awk -F/ '{print $3}')
+                sed -i "/$dev/d" /mnt/etc/fstab
+        fi
+    done
+
+
+    echo "      - done"
+fi
+
