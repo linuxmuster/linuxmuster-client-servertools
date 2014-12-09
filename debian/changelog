@@ -1,3 +1,10 @@
+linuxmuster-client-servertools (0.1-babo2) babo; urgency=low
+
+  * Bibliothek für Helperfunktionen
+  * Konfigurationsdatei
+
+ -- Frank Schiebel <frank@linuxmuster.net>  Tue, 09 Dec 2014 09:43:25 +0100
+
 linuxmuster-client-servertools (0.1-babo1) babo; urgency=low
 
   * initial release

@@ -1,2 +1,3 @@
-usr/sbin/*                                          /usr/sbin/
+usr/sbin/*          /usr/sbin/
+usr/share/*         /usr/share
 etc/*               /etc/

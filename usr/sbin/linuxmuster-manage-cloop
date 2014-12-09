@@ -7,109 +7,57 @@
 #  GPL v3
 #############################################################################################
 
-#############################################################################################
-#  Dieses Skript zusammen mit
-# - name.cloop-Datei
-# - name.cloop.postsync-Datei
-# - name.cloop.desc
-# - name.cloop.torrent
-# - name.cloop.info
-# - name.cloop.macct
-# - start.conf.name
-# in ein Verzeichnis legen und starten.
-# sind Dateien nicht vorhanden, werden sie automatisch vom cloop.linuxmuster.net geladen.
-# NICHT VERGESSEN: linbodir anpassen, damit es im "live-system" passiert
+# Konfiguration lesen
+. /etc/linuxmuster/client-servertools.conf || exit 1
+# Hilfsfunktionen einbinden
+. $CONF_HELPERFUNCTIONS || exit 1
+
+# deklaration der globalen arrays
+declare -A TARGET_FILESET
+declare -A SOURCE_FILESET
+
+# Sanity checks beim skriptstart
+check_startup
+
+# Default Hardwareklasse aus der Konfiguration
+# kann durch Optio -h überschrieben werden
+HWCLASS=$CONF_HWCLASS
+CLOOP_NAME=$CONF_DEFAULT_CLOOP_NAME
+
+# Optionen verarbeiten
+while getopts ":a:h:c:" opt; do
+case $opt in
+    a)
+        ACTION=$OPTARG
+        ;;
+    h)
+        HWCLASS=$OPTARG
+        ;;
+    c)
+        CLOOP_NAME=$OPTARG
+        ;;
+    \?)
+        print_help
+        ;;
+esac
+done
 
 
-linbodir="/var/linbo"
-# für den Fall, dass kein cloop mit im Verzeichnis liegt, wird hier gesucht:
-cloop_remote_path="http://cloop.linuxmuster.net"
-cloop_remote_name="trusty714.cloop"
+case $ACTION in
+auto)
+    colorecho "red" "Automodus: $ACTION $HWCLASS"
+    ;;
+get-cloop)
+    get_remote_cloop $HWCLASS $CLOOP_NAME
+    ;;
+*)
+    print_help
+    ;;
+esac
 
 
-############################################################################
-# Es sollte IN ALLER REGEL keine Notwendigkeit für Änderungen geben...     #
-# Ändere also nur, wenn du genau weißt, was du tust!                       #
-############################################################################
+exit 
 
-if [[ ! "$USER" == "root" ]]
-then
-  echo "Dieses Skript muss als root laufen. ...Abbruch"
-  exit 1
-fi
-clear
-
-
-# wie heißt das Verzeichnis unter /var/linbo, wo der universal-
-# postsync Baum liegt?  (wird in den allermeisten Installationen
-# unverändert bleiben - nachsehen in der mitgelieferten .cloop.postsync)
-
-universalpostsyncdir="linuxmuster-client"
-
-
-# Ohne das Linbo-Verzeichnis macht das ganze Skript keinen Sinn... also prüfen und ggf. abbrechen.
-
-if [[ ! -d ${linbodir} ]]
-then
-  echo "Linboverzeichnis existiert nicht. Bitte Skript ($0) richtig konfigurieren."
-  echo -e "...Abbruch\n\n"
-  exit 1
-fi
-
-
-# Automatische Konfiguration versuchen. Dazu darf nur genau eine .cloop Datei mit im Verzeichnis liegen.
-# Wenn das nicht der Fall ist, abbrechen.
-
-if [[ $(ls *.cloop | wc -l) == 0 ]]
-then
-   echo "Kein cloop lokal vorhanden. Versuche das cloop ${cloop_remote_name} von ${cloop_remote_path} herunterzuladen..."
-   if wget ${cloop_remote_path}/${cloop_remote_name}
-   then
-	echo -e "\e[01;32m...OK.\e[00m"
-   else
-	echo -e "\e[00;31m...failed.\e[00m"
-   fi
-fi
-
-if [[ $(ls *.cloop | wc -l) != 1 ]]
-then
-  echo "Es gibt keine oder mehr als eine .cloop-Datei in diesem Verzeichnis. Das kann nicht gewollt sein."
-  echo "Abbruch..."
-  exit 1
-fi
-
-
-# Namen der cloop-Datei ermitteln, wenn nicht weiter oben schon manuell mitgeteilt
-if [[ "$cloopfile" == "" ]]
-then
-  cloop=*.cloop
-  cloopfile=$(echo $cloop)
-fi
-
-
-# Das selbe für die Start.conf Datei. Sie muss so heißen, wie die cloop-Datei (start.conf.NAME_OHNE_".cloop")
-if [[ "$startconffile" == "" ]]
-then
-  startconffile=start.conf.${cloopfile%.cloop}
-fi
-
-# Die Postsync-Datei MUSS so heißen, wie die cloop-Datei mit .postsync dahinter.
-postsyncfile="${cloopfile}.postsync"
-# und sie muss da sein, deshalb prüfen und ggf. herunterladen
-if [[ ! -e ${postsyncfile} ]]
-then
-  echo "${postsyncfile} ist lokal nicht vorhanden. Versuche ${postsyncfile} von ${cloop_remote_path} herunterzuladen..."
-  if wget -q ${cloop_remote_path}/${postsyncfile}
-  then
-    echo -e "\e[01;32m...OK.\e[00m"
-  else
-    echo -e "\e[00;31m...failed.\e[00m"
-    echo "Ohne Postsync-File geht es nicht weiter..."
-    echo "Abbruch..."
-    exit 1
-  fi
-fi
-# zu kopierende Dateien: (Default ist cloop, info, desc, macct, torrent, startconf und postsync-datei) 
 filestolinbo="${cloopfile} ${cloopfile}.desc ${cloopfile}.info ${cloopfile}.macct ${cloopfile}.torrent ${startconffile} ${postsyncfile}"
 
 # aus dem Postsync-Skript wird die Patchklasse ermittelt.
@@ -136,11 +84,11 @@ do
 	# Sicherheit mit Zeitstempel versehen.
 	if [[ -e "${file}" ]]
 	then
-	  if [[ -e "${linbodir}/${file}" ]]
+	  if [[ -e "${CONF_LINBODIR}/${file}" ]]
 	  then
 	      LINDIRBACKUP=1 # Flag für Meldung am Ende
 	      echo -e "${file} existiert. \e[01;33mSicherungskopie...\e[00m"
-	      if rsync -Pa "${linbodir}/${file}" "${linbodir}/${file}".$(date +"%Y%m%d%H%M%S") 
+	      if rsync -Pa "${CONF_LINBODIR}/${file}" "${CONF_LINBODIR}/${file}".$(date +"%Y%m%d%H%M%S") 
 	      then
 		echo -e "\033[1A\033[11D\e[01;32m...OK. \033[K \e[00m"
 	      else
@@ -149,15 +97,15 @@ do
 	  fi
         else # wenn es das File NICHT gibt.
 	# Versuche, die Datei vom Server herunterzuladen
-   	    echo "${file} ist lokal nicht vorhanden. Versuche ${file} von ${cloop_remote_path} herunterzuladen..."
-   	    if wget -q ${cloop_remote_path}/${file}
+   	    echo "${file} ist lokal nicht vorhanden. Versuche ${file} von ${CONF_CLOOP_SERVER} herunterzuladen..."
+   	    if wget -q ${CONF_CLOOP_SERVER}/${file}
    	    then
               echo -e "\e[01;32m...OK.\e[00m"
             else
               echo -e "\e[00;31m...failed.\e[00m"
-              if [[ -e "${linbodir}/${file}" ]]
+              if [[ -e "${CONF_LINBODIR}/${file}" ]]
 	      then
-		echo -e "\e[01;32mDie Datei ist allerdings in ${linbodir} schon vorhanden. Wenn das Absicht war, ist alles gut.\e[00m"
+		echo -e "\e[01;32mDie Datei ist allerdings in ${CONF_LINBODIR} schon vorhanden. Wenn das Absicht war, ist alles gut.\e[00m"
 	      fi
             fi
 	  # prüfe, ob sie jetzt da ist, um weiter zu machen
@@ -168,8 +116,8 @@ do
 	fi
 
 	  # Datei kopieren und Rechte anpassen
-	  echo "Kopiere ${file} nach ${linbodir}/"
-	  if rsync -Pa "${file}" "${linbodir}/${file}"
+	  echo "Kopiere ${file} nach ${CONF_LINBODIR}/"
+	  if rsync -Pa "${file}" "${CONF_LINBODIR}/${file}"
           then
 	    echo -e "\033[1A\033[11D\e[01;32m...OK. \033[K \e[00m"
 	  else
@@ -178,14 +126,14 @@ do
 
 	  echo -n "setze Dateirechte von ${file}"
 	  #erst den Besitzer
-	  if chown root:root "${linbodir}/${file}"
+	  if chown root:root "${CONF_LINBODIR}/${file}"
 	  then
 	    echo -n -e "\e[01;32m\t...OK.\e[00m"
 	  else
 	    echo -n -e "\e[00;31m...failed\e[00m"
 	  fi
 	  #dann die Zugriffsrechte
-	  if chmod 664 "${linbodir}/${file}"
+	  if chmod 664 "${CONF_LINBODIR}/${file}"
 	  then
 	    echo -n -e "\e[01;32m\t...OK.\e[00m"
 	  else
@@ -206,7 +154,7 @@ SERVERIP=$(cat /etc/hosts | grep -e "^10" | sed 's/\t/ /g' |cut -d" " -f1)
 
 [[ ! -d common/etc ]] && mkdir -p common/etc/
 echo "# Diese Datei wird per postsync gepatcht. Zu bearbeiten ist sie auf dem Server." > ${HOSTS}
-echo "# Pfad: ${linbodir}/${universalpostsyncdir}/${patchclass}/${HOSTS}" >> ${HOSTS}
+echo "# Pfad: ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass}/${HOSTS}" >> ${HOSTS}
 echo "# HOSTNAME wird im Postsyncskript mit dem echten Namen gepatcht" >> ${HOSTS}
 echo "127.0.0.1    HOSTNAME" >> ${HOSTS}
 echo -e "\n#Die nächste Zeile enthält die Hostnamen so, wie sie auf dem Server eingetragen sind..." >> ${HOSTS}
@@ -216,11 +164,11 @@ echo "# damit CUPS zufrieden ist, muss noch diese Zeile hier dazu:" >> ${HOSTS}
 echo "#SERVERIP  server.lokal server.local" >> ${HOSTS}
 
 # Postsync-Baum kopieren... vorher Sicherung erstellen von vorhandenem Verzeichnisbaum
-if [[ -e "${linbodir}/${universalpostsyncdir}/${patchclass}" ]]
+if [[ -e "${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass}" ]]
 then
   POSTSYNCBACKUP=1  # Flag für Meldung am Ende.
   echo -n -e "Postsync-Baum existiert. \e[01;33mSicherungskopie...\e[00m"
-  if mv "${linbodir}/${universalpostsyncdir}/${patchclass}" "${linbodir}/${universalpostsyncdir}/${patchclass}".$(date +"%Y%m%d%H%M%S")
+  if mv "${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass}" "${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass}".$(date +"%Y%m%d%H%M%S")
   then
     echo -e "\e[01;32m\t...OK.\e[00m"
   else
@@ -229,13 +177,13 @@ then
 fi
 
 # Verzeichnisbaum erstellen
-mkdir -p "${linbodir}/${universalpostsyncdir}/${patchclass}/common"
+mkdir -p "${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass}/common"
 echo "Kopiere Postsync-Baum..."
-rsync -Pa common "${linbodir}/${universalpostsyncdir}/${patchclass}"
+rsync -Pa common "${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass}"
 
 # Falls zutreffend, noch die Meldungen ausgeben, ob vorhandene Dateien angefasst wurden...
-[[ "$LINDIRBACKUP" == "1" ]] && echo -e "\e[00;33mEs wurden schon vorhandene Dateien mit Zeitstempel gesichert. Bitte in ${linbodir} nachsehen. \e[00m"
-[[ "$POSTSYNCBACKUP" == "1" ]] && echo -e "\e[00;31mDer ursprüngliche Postsync-Verzeichnisbaum unter ${linbodir}/${universalpostsyncdir}/${patchclass} wurde mit Zeitstempel gesichert. Bitte prüfen, ob wichtige Dateien in den aktuellen Baum kopiert werden müssen. \e[00m"
+[[ "$LINDIRBACKUP" == "1" ]] && echo -e "\e[00;33mEs wurden schon vorhandene Dateien mit Zeitstempel gesichert. Bitte in ${CONF_LINBODIR} nachsehen. \e[00m"
+[[ "$POSTSYNCBACKUP" == "1" ]] && echo -e "\e[00;31mDer ursprüngliche Postsync-Verzeichnisbaum unter ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/${patchclass} wurde mit Zeitstempel gesichert. Bitte prüfen, ob wichtige Dateien in den aktuellen Baum kopiert werden müssen. \e[00m"
 
 /etc/init.d/linbo-bittorrent restart ${cloopfile} force
 echo -e "\n\n\n\e[01;32mFertig\e[00m"
