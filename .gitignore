@@ -1,0 +1,7 @@
+build-arch-stamp
+build-indep-stamp
+configure-stamp
+debian/files
+debian/linuxmuster-client-servertools.debhelper.log
+debian/linuxmuster-client-servertools.substvars
+debian/linuxmuster-client-servertools/
