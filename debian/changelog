@@ -1,3 +1,12 @@
+linuxmuster-client-servertools (0.2-babo1) precise; urgency=low
+
+  * Erste veröffentlichte Version
+  * Liste mit verfügbaren cloops vom Server
+  * generisches Postsync loggt nach /var/log/postsync im Zielsystem
+  * /lastsync Datei im Zielsystem mit Zeitstempel der letzten Synchronisation 
+
+ -- Frank Schiebel <frank@linuxmuster.net>  Thu, 11 Dec 2014 19:30:46 +0100
+
 linuxmuster-client-servertools (0.1-babo3) babo; urgency=low
 
   * Bibliothek für Helperfunktionen

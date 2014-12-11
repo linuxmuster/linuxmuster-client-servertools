@@ -59,6 +59,12 @@ get-cloop)
 configure)
     configure_cloop $CLOOP_NAME
     ;;
+update-available)
+    get_available_images
+    ;;
+list-available)
+    list_available_images
+    ;;
 *)
     print_help
     ;;

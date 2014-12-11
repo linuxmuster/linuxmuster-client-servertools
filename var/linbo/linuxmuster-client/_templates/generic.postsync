@@ -1,4 +1,8 @@
-echo "##### POSTSYNC BEGIN #####"
+echo "##### POSTSYNC BEGIN #####" 
+LOG=/mnt/var/log/postsync.log
+echo "##### POSTSYNC BEGIN #####" >  $LOG
+NOW=$(date +%Y%m%d-%H%M)
+echo $NOW | tee -a $LOG
 
 # IP-Adresse des Servers
 SERVERIP=$(nslookup dummy 2> /dev/null | head -n 1 | awk -F: '{print $2}' | sed "s/\s*//g")
@@ -15,79 +19,77 @@ fi
 # UVZ auf dem Server. Mit diesem Variablen kann 
 # man verschiedene Images bedienen (was bei linux
 # selten nötig ist) 
-PATCHCLASS="default"
+PATCHCLASS="gruppe1"
 
 # Das Verzeichnis, in dem die Serverpatches
 # im lokalen Clientcache synchronisiert werden.
 PATCHCACHE=/linuxmuster-client/serverpatches
 
-echo ""
-echo "Hostname:      ${HOSTNAME}"
-echo "Raum:          ${RAUM}"
-echo "Patchcache:    ${PATCHCACHE}"
-echo "Patchclass:    ${PATCHCLASS}"
-echo ""
+echo "" | tee -a $LOG
+echo "Hostname:      ${HOSTNAME}" | tee -a $LOG
+echo "Raum:          ${RAUM}" | tee -a $LOG
+echo "Patchcache:    ${PATCHCACHE}" | tee -a $LOG
+echo "Patchclass:    ${PATCHCLASS}" | tee -a $LOG
+echo "" | tee -a $LOG
 
 # -----------------------------------------
 # Patchdateien auf das lokale Image rsyncen
 # ----------------------------------------- 
-echo " - getting patchfiles"
+echo " - getting patchfiles" | tee -a $LOG
 
 # RAUM     -> Raumname
 # HOSTNAME -> Rechnername
 # Verzeichnis anlegen, damit es sicher existiert
 mkdir -p /cache/${PATCHCACHE}
-rsync --delete --progress -r "${SERVERIP}::linbo/linuxmuster-client/${PATCHCLASS}" "/cache/${PATCHCACHE}"
+rsync --delete --progress -r "${SERVERIP}::linbo/linuxmuster-client/${PATCHCLASS}" "/cache/${PATCHCACHE}" | tee -a $LOG
 
-echo " - patching local files"
-
-
+echo " - patching local files"  | tee -a $LOG
 
 # common: Bekommen alle clients der Patchklasse
 # files
 if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/common ]; then 
-    echo "   - patching common to /mnt" 
-    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/common/* /mnt/ 
+    echo "   - patching common to /mnt" | tee -a $LOG
+    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/common/* /mnt/ | tee -a $LOG
 fi
 
 # tarpacks
 if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/common/tarpacks ]; then
-  echo "   - unpacking tarpacks from common/tarpacks to /mnt" 
+  echo "   - unpacking tarpacks from common/tarpacks to /mnt" | tee -a $LOG
   for pack in /cache/${PATCHCACHE}/${PATCHCLASS}/common/tarpacks/*; do
-     echo "     - unpacking: $pack"
-     tar xvzf $pack -C /mnt
+     echo "     - unpacking: $pack" | tee -a $LOG
+     tar xvzf $pack -C /mnt | tee -a $LOG
   done
 fi
 
 # Raum: Nur die Clients des Raums
 # files
 if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/${RAUM} ]; then 
-    echo "   - patching ${RAUM} to /mnt" 
-    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/${RAUM}/* /mnt/ 
+    echo "   - patching ${RAUM} to /mnt" | tee -a $LOG
+    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/${RAUM}/* /mnt/ | tee -a $LOG
 fi
 
 # tarpacks
 if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/${RAUM}/tarpacks ]; then
-  echo "   - unpacking tarpacks from ${RAUM}/tarpacks to /mnt" 
+  echo "   - unpacking tarpacks from ${RAUM}/tarpacks to /mnt" | tee -a $LOG
   for pack in /cache/${PATCHCACHE}/${PATCHCLASS}/${RAUM}/tarpacks/*; do
-     echo "     - unpacking: $pack"
-     tar xvzf $pack -C /mnt
+     echo "     - unpacking: $pack" | tee -a $LOG
+     tar xvzf $pack -C /mnt | tee -a $LOG
   done
 fi
 
 # Host: Nur der Rechner
 # files
 if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/${HOSTNAME} ]; then 
-    echo "   - patching ${HOSTNAME} to /mnt" 
-    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/${HOSTNAME}/* /mnt/ 
+    echo "   - patching ${HOSTNAME} to /mnt"  | tee -a $LOG
+    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/${HOSTNAME}/* /mnt/ | tee -a $LOG
 fi
 
 # tarpacks
 if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/${HOSTNAME}/tarpacks ]; then
-  echo "   - unpacking tarpacks from ${HOSTNAME}/tarpacks to /mnt" 
+  echo "   - unpacking tarpacks from ${HOSTNAME}/tarpacks to /mnt" | tee -a $LOG   
   for pack in /cache/${PATCHCACHE}/${PATCHCLASS}/${HOSTNAME}/tarpacks/*; do
-     echo "     - unpacking: $pack"
-     tar xvzf $pack -C /mnt
+     echo "     - unpacking: $pack" | tee -a $LOG
+     tar xvzf $pack -C /mnt | tee -a $LOG
   done
 fi
 
@@ -96,28 +98,21 @@ if [ -d /mnt/postsync.d ]; then
     for SCRIPT in /mnt/postsync.d/*
     do
         chmod 755 $SCRIPT
-        echo "Executing: $SCRIPT"
+        echo "Executing: $SCRIPT" | tee -a $LOG
         #$SCRIPT > /dev/null 2>&1
-        $SCRIPT
-        echo " ...done."
+        $SCRIPT | tee -a $LOG
+        echo " ...done." | tee -a $LOG
     done
     rm -rf /mnt/postsync.d
 fi
 
-# -----------------------------------
-# Berechtigungen anpassen, wenn nötig
-# -----------------------------------
+# wenn es /mnt/tarpacks gibt - löschen
+rm -rf /mnt/tarpacks
 
-echo " - fixing initrd links"
-cd /mnt
-INITRD=$(ls -la | grep initrd.img | grep /boot | awk -F'-> ' '{print $2}' | sed -e "s|^\/||")
+# Zeitstempel letzter sync hinterlegen
+echo $NOW > /mnt/lastsync
 
-if [ "x$INITRD" != "x" ]; then 
-        rm -f /mnt/initrd.img | sed -e "s|^\/||"g
-        ln -s $INITRD initrd.img
-fi
-
-echo "##### POSTSYNC END #####"
+echo "##### POSTSYNC END #####" | tee -a $LOG
 
 
 

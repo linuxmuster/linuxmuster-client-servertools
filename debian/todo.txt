@@ -1,4 +1,7 @@
 # AK 10.12.
 - HWCLASS bei config berücksichtigen?
-- Logging der Ausgaben ins Zielsystem?
-- tarpacks Verzeichnis löschen?
+- cloops aus UVZ holen
+
+Done:
+---- Logging der Ausgaben ins Zielsystem?--
+---- tarpacks Verzeichnis löschen? --------

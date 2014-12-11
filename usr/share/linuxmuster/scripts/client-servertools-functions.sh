@@ -40,7 +40,7 @@ echo -e "${open}$2${close}"
 function print_help() {
 cat <<End-of-help
 Anwendung:
-    linuxmuster-manage-cloop [-a action]
+    $0 [-a action]
 Aktionsauswahl:
     -a auto      
         Automatischer Modus, versucht das cloop aus dem Netz vollautomatisch zu installieren
@@ -51,6 +51,11 @@ Aktionsauswahl:
     -a configure  
         Bereitet ein heruntergeladenes cloop-Dateiset mit einem passenden postsync 
         Skript zur Synchronisation auf Clients vor
+    -a update-available
+        Holt eine Liste verfügbarer cloops vom server
+    -a list-available
+        Listet die verfügbaren cloops auf. Aktualisiert zuvor die Liste der verfügbaren 
+        cloops vom Server  
 
 Optionen
     -h <Hardware-Klasse>  
@@ -60,6 +65,8 @@ Optionen
     -c <cloop-Dateiname>
         Kann bei der Aktion "configure" angegeben werden. Name der 
         cloop-Datei ohne den Pfad /var/linbo
+    -p <patchklasse> 
+        Legt die Standard-Postyncpatches im UVZ /var/linbo/linuxmuster-client/<patchklasse> an.
 End-of-help
 }
 
@@ -80,6 +87,35 @@ function check_startup {
         echo "Das angegebene Linboverzeichnis existiert nicht. Abbruch"
         exit 1
     fi
+}
+
+# 
+# Aktualisiert die Liste der aktuell verfügbaren Online-Images
+# 
+function get_available_images {
+    if [ -d /var/cache/linuxmuster-client-servertools/ ]; then 
+        rm -rf /var/cache/linuxmuster-client-servertools/
+    fi
+    echo  -n "Hole Liste der verfügbaren cloops..."
+    wget --mirror -A.txt -np -P /var/cache/linuxmuster-client-servertools http://cloop.linuxmuster.net/meta/ > /dev/null 2>&1 && colorecho "green" "OK"
+}
+
+# 
+# Listet die  aktuell verfügbaren Online-Images auf
+# 
+function list_available_images {
+    get_available_images
+    desc_files=$(find /var/cache/linuxmuster-client-servertools/ -name 'description.txt')
+    echo 
+    echo "Imagename                 Info"
+    echo "-----------------------------------------------"
+    for desc in $desc_files; do
+        name=$(grep ^Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+        info=$(grep ^Info: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+        echo "$name                          $info"
+    done
+    echo "-----------------------------------------------"
+    echo 
 }
 
 #
@@ -142,13 +178,14 @@ function check_target_fileset {
 #
 function get_remote_cloop {
     get_target_fileset $1
-    get_source_fileset ${2%.cloop}
+    cloop_name=${2%.cloop}
+    get_source_fileset $cloop_name
     check_target_fileset
 
     for key in startconf cloop postsync desc macct; do 
         echo "Hole ${TARGET_FILESET[$key]} von"
-        echo "     ${CONF_CLOOP_SERVER}/${SOURCE_FILESET[$key]}"
-        if wget ${CONF_CLOOP_SERVER}/${SOURCE_FILESET[$key]} -O ${TARGET_FILESET[$key]}; then 
+        echo "     ${CONF_CLOOP_SERVER}/cloops/$cloop_name/${SOURCE_FILESET[$key]}"
+        if wget ${CONF_CLOOP_SERVER}/cloops/$cloop_name/${SOURCE_FILESET[$key]} -O ${TARGET_FILESET[$key]}; then 
             colorecho "green" "Success."
         else 
             colorecho "red" "Failed"
@@ -168,14 +205,21 @@ function configure_cloop {
         echo "Cloop Datei nicht gefunden: $CONF_LINBODIR/$1"
         exit 1
     fi
+
+    echo "INFO: Cloop-Datei ist $CONF_LINBODIR/$1"
+
     HWCLASS=${1%.cloop}
     STARTCONF=$CONF_LINBODIR/start.conf.$HWCLASS
     if [ ! -e $STARTCONF ]; then 
         echo "Keine start.conf Vorlage für $HWCLASS gefunden"
         exit 1
     fi
+    
+    echo "INFO: start.conf ist $STARTCONF"
     ts=$(date +%Y%m%d-%H%M%S)
     cp $STARTCONF ${STARTCONF}.$ts.autobackup
+
+    echo "INFO: Passe start.conf an"
 
     # start.conf anpassen
     sed -i "s/\(Server\s*\=\s*\) \(.*\)/\1 $serverip/" $STARTCONF
@@ -188,15 +232,16 @@ function configure_cloop {
     fi
 
 
+    echo "INFO: Erstelle postsync aus Vorlage"
     # postsync aus vorlage holen
     POSTSYNC=$CONF_LINBODIR/$1.postsync
     cp $CONF_GENERIC_POSTSYNC $POSTSYNC
+    echo "INFO: Patchclasse ist $PATCHCLASS"
     mkdir -p /var/linbo/linuxmuster-client/$PATCHCLASS/common/
     cp -ar /var/linbo/linuxmuster-client/_templates/postsync.d /var/linbo/linuxmuster-client/$PATCHCLASS/common/
     sed -i "s/\(PATCHCLASS\s*\=\s*\)\(.*\)/\1\"$PATCHCLASS\"/" $POSTSYNC
 
     # postsync konfiguration anpassen
-
     # linuxadmin-Passworthash aus der Konfiguration bestimmen und für das postsync Skript bereitstellen
     PWHASH=$(echo "$CONF_LINUXADMIN_PW" | makepasswd --clearfrom=- --crypt-md5 |awk '{ print $2 }')
     echo "linuxadmin|$PWHASH" > /var/linbo/linuxmuster-client/$PATCHCLASS/common/passwords
@@ -205,11 +250,4 @@ function configure_cloop {
     mkdir -p  /var/linbo/linuxmuster-client/$PATCHCLASS/common/root/.ssh
     cat /root/.ssh/id_dsa.pub > /var/linbo/linuxmuster-client/$PATCHCLASS/common/root/.ssh/authorized_keys
     
- 
-
-    
-
-    
-    
-
 }
