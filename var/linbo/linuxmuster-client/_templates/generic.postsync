@@ -36,7 +36,7 @@ echo "" | tee -a $LOG
 echo "Hostname:      ${HOSTNAME}" | tee -a $LOG
 echo "Raum:          ${RAUM}" | tee -a $LOG
 echo "Patchcache:    ${PATCHCACHE}" | tee -a $LOG
-echo "Hostgruppe:    ${HOSTGROUP}   | tee -a $LOG
+echo "Hostgruppe:    ${HOSTGROUP}"   | tee -a $LOG
 echo "Patchclass:    ${PATCHCLASS}" | tee -a $LOG
 echo "" | tee -a $LOG
 

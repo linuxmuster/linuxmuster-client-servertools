@@ -218,19 +218,28 @@ function configure_cloop {
 
     echo "INFO: Cloop-Datei ist $CONF_LINBODIR/$1"
 
-    HWCLASS=${1%.cloop}
-    STARTCONF=$CONF_LINBODIR/start.conf.$HWCLASS
-    if [ ! -e $STARTCONF ]; then 
-        echo "ERROR: Keine start.conf Vorlage für $HWCLASS gefunden"
+    CLOOP_HWCLASS=${1%.cloop}
+    STARTCONF_SRC=$CONF_LINBODIR/start.conf.$CLOOP_HWCLASS
+    if [ ! -e $STARTCONF_SRC ]; then 
+        echo "ERROR: Keine start.conf Vorlage für cloop $CLOOP_HWCLASS gefunden"
         exit 1
     fi
-    
-    echo "INFO: start.conf ist $STARTCONF"
-    ts=$(date +%Y%m%d-%H%M%S)
-    echo "INFO: Sichere $STARTCONF nach $STARTCONF ${STARTCONF}.$ts.autobackup"
-    cp $STARTCONF ${STARTCONF}.$ts.autobackup
 
-    echo "INFO: Passe start.conf an"
+    if [ $HWCLASS == "" ]; then
+        HWCLASS=$CLOOP_HWCLASS
+    fi
+    
+    STARTCONF=$CONF_LINBODIR/start.conf.$HWCLASS
+    echo "INFO: start.conf Quelle ist $STARTCONF_SRC"
+    echo "INFO: start.conf Ziel ist $STARTCONF"
+    ts=$(date +%Y%m%d-%H%M%S)
+    if [ -f $STARTCONF ]; then
+        echo "INFO: Sichere $STARTCONF nach $STARTCONF ${STARTCONF}.$ts.autobackup"
+        cp $STARTCONF ${STARTCONF}.$ts.autobackup
+    fi
+    cp $STARTCONF_SRC $STARTCONF
+
+    echo "INFO: Passe $STARTCONF an"
 
     # start.conf anpassen
     sed -i "s/\(Server\s*\=\s*\) \(.*\)/\1 $serverip/" $STARTCONF

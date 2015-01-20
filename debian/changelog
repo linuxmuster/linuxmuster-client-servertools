@@ -1,8 +1,9 @@
-linuxmuster-client-servertools (0.4-babo1) babo; urgency=low
+linuxmuster-client-servertools (0.5-babo1) babo; urgency=low
 
   * Hardwareklasse als Patchklasse möglich: Gleiches cloop, verschiedene
     Patches
   * Vorhandene Patchklassenverzichnisse werden mit Zeitstempel gesichert
+  * Man kann aus einem heruntergeladenen Image mehrere hardwareklassen erzeugen
 
  -- Frank Schiebel <frank@linuxmuster.net>  Tue, 20 Jan 2015 13:31:37 +0100 
 
