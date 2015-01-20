@@ -1,0 +1,16 @@
+#!/bin/sh
+if [ -e /mnt/etc/hosts ]; then
+    echo " - fixing hosts"
+
+    # Die network.settings vom Server muss auf dem Client zur Verfügung stehen
+    . /mnt/etc/linuxmuster-client/server.network.settings
+
+    HOSTS=/mnt/etc/hosts
+    echo "# Diese Datei wird beim postsync erzeugt." > ${HOSTS}
+    echo "127.0.0.1 ${HOSTNAME}" >> ${HOSTS}
+    echo "${serverip}  ${servername}.${domainname}  ${servername}" >> ${HOSTS}
+    echo "# damit CUPS zufrieden ist..." >> ${HOSTS}
+    echo "${serverip}  server.lokal server.local" >> ${HOSTS}
+
+    echo "      - done"
+fi
