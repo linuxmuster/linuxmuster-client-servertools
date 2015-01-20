@@ -52,6 +52,7 @@ done
 case $ACTION in
 auto)
     colorecho "red" "Automodus: $ACTION $HWCLASS"
+    colorecho "red" "NOT IMPLEMENTED YET"
     ;;
 get-cloop)
     get_remote_cloop $HWCLASS $CLOOP_NAME

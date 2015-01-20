@@ -1,3 +1,19 @@
+linuxmuster-client-servertools (0.4-babo1) babo; urgency=low
+
+  * Hardwareklasse als Patchklasse möglich: Gleiches cloop, verschiedene
+    Patches
+  * Vorhandene Patchklassenverzichnisse werden mit Zeitstempel gesichert
+
+ -- Frank Schiebel <frank@linuxmuster.net>  Tue, 20 Jan 2015 13:31:37 +0100 
+
+linuxmuster-client-servertools (0.3-babo1) babo; urgency=low
+
+  * network.settings ins Postsync Verzeichnis
+  * hosts Datei anpassen
+  * Abhängigkeit zu makepasswd ins Paket
+
+ -- Frank Schiebel <frank@linuxmuster.net>  Fri, 12 Dec 2014 11:29:46 +0100
+
 linuxmuster-client-servertools (0.2-babo1) babo; urgency=low
 
   * Erste veröffentlichte Version

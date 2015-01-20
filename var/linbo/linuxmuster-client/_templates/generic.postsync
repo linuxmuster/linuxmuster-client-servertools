@@ -7,6 +7,9 @@ echo $NOW | tee -a $LOG
 # IP-Adresse des Servers
 SERVERIP=$(nslookup dummy 2> /dev/null | head -n 1 | awk -F: '{print $2}' | sed "s/\s*//g")
 
+# Die Hostgruppe des aktuellen Rechners
+HOSTGROUP=$(hostgroup) 
+
 # Raum feststellen. Dieses Skript geht davon aus
 # dass die Rechner Namen der Form
 # raumname-hostname haben, also z.B. cr01-pc18
@@ -16,9 +19,13 @@ if [ "x${RAUM}" == "x" ]; then
     RAUM="unknown"
 fi
 
-# UVZ auf dem Server. Mit diesem Variablen kann 
-# man verschiedene Images bedienen (was bei linux
-# selten nötig ist) 
+# UVZ für die Patches auf dem Server. Mit dieser Variablen 
+# kann man verschiedene Patches, z.B. für unterschiedliche
+# Linux-Versionen bereitstellen.
+# Wenn man hier $HOSTGROUP einträgt, erhält jede Rechnerklasse 
+# ein eigenes Patchklassenverzeichnis auf dem Server.
+# Damit kann man verschiedene Patchklassen mit derselben cloop-Datei
+# bedienen, wenn man das benötigt.
 PATCHCLASS="gruppe1"
 
 # Das Verzeichnis, in dem die Serverpatches
@@ -29,6 +36,7 @@ echo "" | tee -a $LOG
 echo "Hostname:      ${HOSTNAME}" | tee -a $LOG
 echo "Raum:          ${RAUM}" | tee -a $LOG
 echo "Patchcache:    ${PATCHCACHE}" | tee -a $LOG
+echo "Hostgruppe:    ${HOSTGROUP}   | tee -a $LOG
 echo "Patchclass:    ${PATCHCLASS}" | tee -a $LOG
 echo "" | tee -a $LOG
 

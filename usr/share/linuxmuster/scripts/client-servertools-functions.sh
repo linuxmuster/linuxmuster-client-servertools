@@ -57,7 +57,7 @@ Aktionsauswahl:
         Listet die verfügbaren cloops auf. Aktualisiert zuvor die Liste der verfügbaren 
         cloops vom Server  
 
-Optionen
+Optionen:
     -h <Hardware-Klasse>  
         Legt unter verwendung des heruntergeladenen cloops 
         eine Konfiguration mit dem angegebenen Namen an.
@@ -67,6 +67,15 @@ Optionen
         cloop-Datei ohne den Pfad /var/linbo
     -p <patchklasse> 
         Legt die Standard-Postyncpatches im UVZ /var/linbo/linuxmuster-client/<patchklasse> an.
+
+Beispiele:
+
+ $0 -a configure -h myubuntu -p mypatches -c trusty714.cloop
+
+ Konfiguriert das vorhandene Cloop trusty714.cloop als 
+ linbo-Grupp "myubuntu" mit einem universellen postsync Skript, 
+ verwendet dafür das Patchklassenverzeichnis 
+ /var/linbo/linuxmuster-client/mypatches 
 End-of-help
 }
 
@@ -133,6 +142,7 @@ function get_target_fileset {
     done
 
 }
+
 #
 # Erzeugt ein Array mit den Quelldateien
 # @Argumente
@@ -196,7 +206,7 @@ function get_remote_cloop {
 
 
 #
-# @Agrunmente
+# @Argunmente
 # $1  Name der cloop-Datei, die eingerichtet werden soll
 #
 function configure_cloop {
@@ -211,12 +221,13 @@ function configure_cloop {
     HWCLASS=${1%.cloop}
     STARTCONF=$CONF_LINBODIR/start.conf.$HWCLASS
     if [ ! -e $STARTCONF ]; then 
-        echo "Keine start.conf Vorlage für $HWCLASS gefunden"
+        echo "ERROR: Keine start.conf Vorlage für $HWCLASS gefunden"
         exit 1
     fi
     
     echo "INFO: start.conf ist $STARTCONF"
     ts=$(date +%Y%m%d-%H%M%S)
+    echo "INFO: Sichere $STARTCONF nach $STARTCONF ${STARTCONF}.$ts.autobackup"
     cp $STARTCONF ${STARTCONF}.$ts.autobackup
 
     echo "INFO: Passe start.conf an"
@@ -226,6 +237,7 @@ function configure_cloop {
     sed -i "s/\(Group\s*\=\s*\) \(.*\)/\1 $HWCLASS/" $STARTCONF
     sed -i "s/\(BaseImage\s*\=\s*\) \(.*\)/\1 $1/" $STARTCONF
 
+    # Imageverteilung via rsync oder ist bittorrent enabled?
     BITTORRENT_ON=$(grep START_BTTRACK /etc/default/bittorrent  | awk -F= '{print $2}')
     if [ "x$BITTORRENT_ON" == "x0" ]; then 
         sed -i "s/\(DownloadType\s*\=\s*\) \(.*\)/\1 rsync/" $STARTCONF
@@ -236,10 +248,31 @@ function configure_cloop {
     # postsync aus vorlage holen
     POSTSYNC=$CONF_LINBODIR/$1.postsync
     cp $CONF_GENERIC_POSTSYNC $POSTSYNC
+
+    if [ $CONF_HOSTGROUP_AS_PATCHCLASS != 0 ]; then 
+        # Patchklasse aus config und Kommandozeile wird überschrieben
+        # wenn die Konfiguration die Hostgruppe als Patchklasse erzwingt
+        echo "WARN: Konfiguration erzwingt Hardwareklasse als Patchklasse"
+        PATCHCLASS=$HWCLASS
+    fi
     echo "INFO: Patchclasse ist $PATCHCLASS"
+
+    # Gibt es das Patchklassenverzeichnise schon?
+    # Wenn ja: Sichern!
+    if [ -d /var/linbo/linuxmuster-client/$PATCHCLASS ]; then 
+        echo "WARN: Sichere das vorhandene Patchklassenverzeichnis"
+        echo "      /var/linbo/linuxmuster-client/$PATCHCLASS  nach"
+        echo "      /var/linbo/linuxmuster-client/$PATCHCLASS.$ts.autobackup"
+        mv /var/linbo/linuxmuster-client/$PATCHCLASS /var/linbo/linuxmuster-client/$PATCHCLASS.$ts.autobackup
+    fi
+
     mkdir -p /var/linbo/linuxmuster-client/$PATCHCLASS/common/
     cp -ar /var/linbo/linuxmuster-client/_templates/postsync.d /var/linbo/linuxmuster-client/$PATCHCLASS/common/
     sed -i "s/\(PATCHCLASS\s*\=\s*\)\(.*\)/\1\"$PATCHCLASS\"/" $POSTSYNC
+
+    # Netzwerksettings in den postsync-pfad
+    mkdir -p /var/linbo/linuxmuster-client/$PATCHCLASS/common/etc/linuxmuster-client/
+    cp  /var/lib/linuxmuster/network.settings /var/linbo/linuxmuster-client/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
 
     # postsync konfiguration anpassen
     # linuxadmin-Passworthash aus der Konfiguration bestimmen und für das postsync Skript bereitstellen
