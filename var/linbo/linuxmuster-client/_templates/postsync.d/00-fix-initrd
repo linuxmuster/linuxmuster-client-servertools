@@ -3,11 +3,8 @@ echo " - fixing initrd links"
 cd /mnt
 INITRD=$(ls -la | grep initrd.img | grep /boot | awk -F'-> ' '{print $2}' | sed -e "s|^\/||")
 
-if [ "x$INITRD" != "x" ]; then 
+if [ "x$INITRD" != "x" ]; then
         rm -f /mnt/initrd.img | sed -e "s|^\/||"g
         ln -s $INITRD initrd.img
 fi
 cd /
-
-
-
