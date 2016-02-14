@@ -49,7 +49,7 @@ echo " - getting patchfiles" | tee -a $LOG
 # HOSTNAME -> Rechnername
 # Verzeichnis anlegen, damit es sicher existiert
 mkdir -p /cache/${PATCHCACHE}
-rsync --delete --progress -r "${SERVERIP}::linbo/linuxmuster-client/${PATCHCLASS}" "/cache/${PATCHCACHE}" | tee -a $LOG
+rsync --delete --progress -lr "${SERVERIP}::linbo/linuxmuster-client/${PATCHCLASS}" "/cache/${PATCHCACHE}" | tee -a $LOG
 
 echo " - patching local files"  | tee -a $LOG
 
