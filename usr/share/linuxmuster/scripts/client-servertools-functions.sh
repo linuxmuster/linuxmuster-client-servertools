@@ -56,157 +56,191 @@ Aktionsauswahl:
     -a list-available
         Listet die verfügbaren cloops auf. Aktualisiert zuvor die Liste der verfügbaren 
         cloops vom Server  
+    -a set-postsync-pass
+        Setzt das Passwort des Benutzers linuxadmin bei der mit der Option -p angegebenen
+	Patchklasse auf den Wert in der Konfigurationsdatei. Wird mit der Option -l ein 
+	Passwort �bergeben, wird dieses f�r die angegebene Patchklasse gesetzt.
 
 Optionen:
     -h <Hardware-Klasse>  
         Legt unter verwendung des heruntergeladenen cloops 
-        eine Konfiguration mit dem angegebenen Namen an.
-        Standard ist "ubuntuclient"
-    -c <cloop-Dateiname>
-        Kann bei der Aktion "configure" angegeben werden. Name der 
-        cloop-Datei ohne den Pfad /var/linbo
-    -p <patchklasse> 
-        Legt die Standard-Postyncpatches im UVZ /var/linbo/linuxmuster-client/<patchklasse> an.
+            eine Konfiguration mit dem angegebenen Namen an.
+            Standard ist "ubuntuclient"
+        -c <cloop-Dateiname>
+            Kann bei der Aktion "configure" angegeben werden. Name der 
+            cloop-Datei ohne den Pfad /var/linbo
+        -p <patchklasse> 
+            Legt die Standard-Postyncpatches im UVZ /var/linbo/linuxmuster-client/<patchklasse> an.
 
-Beispiele:
+    Beispiele:
 
- $0 -a configure -h myubuntu -p mypatches -c trusty714.cloop
+     $0 -a configure -h myubuntu -p mypatches -c trusty714.cloop
 
- Konfiguriert das vorhandene Cloop trusty714.cloop als 
- linbo-Grupp "myubuntu" mit einem universellen postsync Skript, 
- verwendet dafür das Patchklassenverzeichnis 
- /var/linbo/linuxmuster-client/mypatches 
+     Konfiguriert das vorhandene Cloop trusty714.cloop als 
+     linbo-Grupp "myubuntu" mit einem universellen postsync Skript, 
+     verwendet dafür das Patchklassenverzeichnis 
+     /var/linbo/linuxmuster-client/mypatches 
 End-of-help
 }
 
 
-#
-# Einige Checks, die vor dem Start des eigentlichen 
-# Skripts ausgeführt werden
-#
-function check_startup {
-    # Are we root?
-    if [[ ! "$USER" == "root" ]]; then
-        echo "Dieses Skript muss als root laufen. Abbruch."
-        exit 1
-    fi
-
-    # Gibt es das linbo-Verzeichnis?
-    if [[ ! -d ${CONF_LINBODIR} ]]; then
-        echo "Das angegebene Linboverzeichnis existiert nicht. Abbruch"
-        exit 1
-    fi
-}
-
-# 
-# Aktualisiert die Liste der aktuell verfügbaren Online-Images
-# 
-function get_available_images {
-    if [ -d /var/cache/linuxmuster-client-servertools/ ]; then 
-        rm -rf /var/cache/linuxmuster-client-servertools/
-    fi
-    echo  -n "Hole Liste der verfügbaren cloops..."
-    wget --mirror -A.txt -np -P /var/cache/linuxmuster-client-servertools http://cloop.linuxmuster.net/meta/ > /dev/null 2>&1 && colorecho "green" "OK"
-}
-
-# 
-# Listet die  aktuell verfügbaren Online-Images auf
-# 
-function list_available_images {
-    get_available_images
-    desc_files=$(find /var/cache/linuxmuster-client-servertools/ -name 'description.txt')
-    echo 
-    echo "Imagename                 Info"
-    echo "-----------------------------------------------"
-    for desc in $desc_files; do
-        name=$(grep ^Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
-        info=$(grep ^Info: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
-        echo "$name                          $info"
-    done
-    echo "-----------------------------------------------"
-    echo 
-}
-
-#
-# Erzeugt ein Array mit den Zieldateien
-# @Argumente
-# $1 hardwareklasse
-# @Anwendung
-# get_target_fileset mylinux
-#
-function get_target_fileset {
-    TARGET_FILESET["startconf"]=${CONF_LINBODIR}/start.conf.$1 
-    TARGET_FILESET["cloop"]=${CONF_LINBODIR}/$1.cloop 
-    for key in postsync desc macct; do 
-        TARGET_FILESET["$key"]=${CONF_LINBODIR}/$1.cloop.$key 
-    done
-
-}
-
-#
-# Erzeugt ein Array mit den Quelldateien
-# @Argumente
-# $1 Remote cloop Name
-# @Anwendung
-# get_source_fileset trusty714
-#
-function get_source_fileset {
-    SOURCE_FILESET["startconf"]=start.conf.$1 
-    SOURCE_FILESET["cloop"]=$1.cloop 
-    for key in postsync desc macct; do 
-        SOURCE_FILESET["$key"]=$1.cloop.$key 
-    done
-}
-
-
-#
-# Überprüft, ob die geplanten Zieldateien schon existieren
-# @Argumente
-# $1 hardwareklasse
-# @Anwendung
-# check_conflicting_files mylinux
-#
-function check_target_fileset {
-    stop="0";
-    for key in startconf cloop postsync desc macct; do 
-        if [ -e ${TARGET_FILESET["$key"]} ]; then 
-            echo "Die Datei ${TARGET_FILESET["$key"]}  existiert bereits."
-            stop="1"
+    #
+    # Einige Checks, die vor dem Start des eigentlichen 
+    # Skripts ausgeführt werden
+    #
+    function check_startup {
+        # Are we root?
+        if [[ ! "$USER" == "root" ]]; then
+            echo "Dieses Skript muss als root laufen. Abbruch."
+            exit 1
         fi
-    done
-    if [ "x$stop" == "x1" ]; then 
-        colorecho "red" "Werde keine Dateien überschreiben, lösen Sie den Konflikt bitte zuerst auf"
+
+        # Gibt es das linbo-Verzeichnis?
+        if [[ ! -d ${CONF_LINBODIR} ]]; then
+            echo "Das angegebene Linboverzeichnis existiert nicht. Abbruch"
+            exit 1
+        fi
+    }
+
+    # 
+    # Aktualisiert die Liste der aktuell verfügbaren Online-Images
+    # 
+    function get_available_images {
+        if [ -d /var/cache/linuxmuster-client-servertools/ ]; then 
+            rm -rf /var/cache/linuxmuster-client-servertools/
+        fi
+        echo  -n "Hole Liste der verfügbaren cloops..."
+        wget --mirror -A.txt -np -P /var/cache/linuxmuster-client-servertools http://cloop.linuxmuster.net/meta/ > /dev/null 2>&1 && colorecho "green" "OK"
+    }
+
+    # 
+    # Listet die  aktuell verfügbaren Online-Images auf
+    # 
+    function list_available_images {
+        get_available_images
+        desc_files=$(find /var/cache/linuxmuster-client-servertools/ -name 'description.txt')
+        echo 
+        echo "Imagename                 Info"
+        echo "-----------------------------------------------"
+        for desc in $desc_files; do
+            name=$(grep ^Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+            info=$(grep ^Info: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+            echo "$name                          $info"
+        done
+        echo "-----------------------------------------------"
+        echo 
+    }
+
+    #
+    # Erzeugt ein Array mit den Zieldateien
+    # @Argumente
+    # $1 hardwareklasse
+    # @Anwendung
+    # get_target_fileset mylinux
+    #
+    function get_target_fileset {
+        TARGET_FILESET["startconf"]=${CONF_LINBODIR}/start.conf.$1 
+        TARGET_FILESET["cloop"]=${CONF_LINBODIR}/$1.cloop 
+        for key in postsync desc macct; do 
+            TARGET_FILESET["$key"]=${CONF_LINBODIR}/$1.cloop.$key 
+        done
+        for key in md5sums md5sig; do 
+            TARGET_FILESET["$key"]=${CONF_LINBODIR}/$1_hashes.$key 
+        done
+    }
+
+    #
+    # Erzeugt ein Array mit den Quelldateien
+    # @Argumente
+    # $1 Remote cloop Name
+    # @Anwendung
+    # get_source_fileset trusty714
+    #
+    function get_source_fileset {
+        SOURCE_FILESET["startconf"]=start.conf.$1 
+        SOURCE_FILESET["cloop"]=$1.cloop 
+        SOURCE_FILESET["md5sums"]=md5sums 
+        SOURCE_FILESET["md5sig"]=md5sums.sig 
+        for key in postsync desc macct; do 
+            SOURCE_FILESET["$key"]=$1.cloop.$key 
+        done
+    }
+
+
+    #
+    # Ueberprüft, ob die geplanten Zieldateien schon existieren
+    # @Argumente
+    # $1 hardwareklasse
+    # @Anwendung
+    # check_conflicting_files mylinux
+    #
+    function check_target_fileset {
+        stop="0";
+        for key in startconf cloop postsync desc macct; do 
+            if [ -e ${TARGET_FILESET["$key"]} ]; then 
+                echo "Die Datei ${TARGET_FILESET["$key"]}  existiert bereits."
+                stop="1"
+            fi
+        done
+        if [ "x$stop" == "x1" ]; then 
+            colorecho "red" "Werde keine Dateien überschreiben, lösen Sie den Konflikt bitte zuerst auf"
+            exit 1
+        fi
+    }
+
+    #
+    # Hole die Cloop-Dateien vom cloop-Server
+    # @Argumente
+    # $1  Hardwareklasse
+    # $2 Remote Cloop Name
+    #
+    function get_remote_cloop {
+        get_target_fileset $1
+        cloop_name=${2%.cloop}
+        get_source_fileset $cloop_name
+        check_target_fileset
+
+        for key in startconf cloop postsync desc macct md5sums md5sig; do 
+            echo "Hole ${TARGET_FILESET[$key]} von"
+            echo "     ${CONF_CLOOP_SERVER}/cloops/$cloop_name/${SOURCE_FILESET[$key]}"
+            if wget ${CONF_CLOOP_SERVER}/cloops/$cloop_name/${SOURCE_FILESET[$key]} -O ${TARGET_FILESET[$key]}; then 
+                colorecho "green" "Success."
+            else 
+                colorecho "red" "Failed"
+                rm -f ${TARGET_FILESET[$key]}
+            fi
+        done
+    }
+
+#
+# Sets password hash to posytsync file
+# $1 Name der Patchklasse
+#
+function set_password_to_postsync {
+    if [ x$1 == "x" ]; then 
+        echo "ERROR: Zum setzen eines neuen Passworts muss die Patchklasse angegeben werden"
         exit 1
+    fi
+    if [ ! -d /var/linbo/linuxmuster-client/$1/common/ ]; then 
+        echo "ERROR: Das Verzeichnis /var/linbo/linuxmuster-client/$1/common/ existiert nicht."
+        echo "ERROR: Die Patchklasse $1 gibt es nicht!"
+        exit 1
+    fi
+
+    if [ x$LAPASS == "x" ]; then 
+        # postsync konfiguration anpassen
+        # linuxadmin-Passworthash aus der Konfiguration bestimmen und für das postsync Skript bereitstellen
+        PWHASH=$(echo "$CONF_LINUXADMIN_PW" | makepasswd --clearfrom=- --crypt-md5 |awk '{ print $2 }')
+        echo "linuxadmin|$PWHASH" > /var/linbo/linuxmuster-client/$1/common/passwords
+    else 
+        PWHASH=$(echo "$LAPASS" | makepasswd --clearfrom=- --crypt-md5 |awk '{ print $2 }')
+        echo "linuxadmin|$PWHASH" > /var/linbo/linuxmuster-client/$1/common/passwords
     fi
 }
 
+
 #
-# Hole die Cloop-Dateien vom cloop-Server
 # @Argumente
-# $1  Hardwareklasse
-# $2 Remote Cloop Name
-#
-function get_remote_cloop {
-    get_target_fileset $1
-    cloop_name=${2%.cloop}
-    get_source_fileset $cloop_name
-    check_target_fileset
-
-    for key in startconf cloop postsync desc macct; do 
-        echo "Hole ${TARGET_FILESET[$key]} von"
-        echo "     ${CONF_CLOOP_SERVER}/cloops/$cloop_name/${SOURCE_FILESET[$key]}"
-        if wget ${CONF_CLOOP_SERVER}/cloops/$cloop_name/${SOURCE_FILESET[$key]} -O ${TARGET_FILESET[$key]}; then 
-            colorecho "green" "Success."
-        else 
-            colorecho "red" "Failed"
-            rm -f ${TARGET_FILESET[$key]}
-        fi
-    done
-}
-
-
-#
-# @Argunmente
 # $1  Name der cloop-Datei, die eingerichtet werden soll
 #
 function configure_cloop {
@@ -256,7 +290,7 @@ function configure_cloop {
     echo "INFO: Erstelle postsync aus Vorlage"
     # postsync aus vorlage holen
     POSTSYNC=$CONF_LINBODIR/$1.postsync
-    cp $CONF_GENERIC_POSTSYNC $POSTSYNC
+    cp $CONF_GENERIC_POSTSYNC/generic.postsync $POSTSYNC
 
     if [ $CONF_HOSTGROUP_AS_PATCHCLASS != 0 ]; then 
         # Patchklasse aus config und Kommandozeile wird überschrieben
@@ -276,18 +310,16 @@ function configure_cloop {
     fi
 
     mkdir -p /var/linbo/linuxmuster-client/$PATCHCLASS/common/
-    cp -ar /var/linbo/linuxmuster-client/_templates/postsync.d /var/linbo/linuxmuster-client/$PATCHCLASS/common/
+    cp -ar $CONF_GENERIC_POSTSYNC/generic.postsync.d /var/linbo/linuxmuster-client/$PATCHCLASS/common/postsync.d
     sed -i "s/\(PATCHCLASS\s*\=\s*\)\(.*\)/\1\"$PATCHCLASS\"/" $POSTSYNC
 
     # Netzwerksettings in den postsync-pfad
     mkdir -p /var/linbo/linuxmuster-client/$PATCHCLASS/common/etc/linuxmuster-client/
     cp  /var/lib/linuxmuster/network.settings /var/linbo/linuxmuster-client/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
-
-    # postsync konfiguration anpassen
-    # linuxadmin-Passworthash aus der Konfiguration bestimmen und für das postsync Skript bereitstellen
-    PWHASH=$(echo "$CONF_LINUXADMIN_PW" | makepasswd --clearfrom=- --crypt-md5 |awk '{ print $2 }')
-    echo "linuxadmin|$PWHASH" > /var/linbo/linuxmuster-client/$PATCHCLASS/common/passwords
     
+    # Passworthash in den postsync-Baum schreiben
+    set_password_to_postsync $PATCHCLASS
+ 
     # public-key des Server-roots in die authorized keys der client roots
     mkdir -p  /var/linbo/linuxmuster-client/$PATCHCLASS/common/root/.ssh
     cat /root/.ssh/id_dsa.pub > /var/linbo/linuxmuster-client/$PATCHCLASS/common/root/.ssh/authorized_keys

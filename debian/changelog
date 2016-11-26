@@ -1,3 +1,17 @@
+linuxmuster-client-servertools (0.6.2) precise; urgency=low
+
+  * Moved postsync-template to /usr/lib/linuxmuster-client-servertools
+  * Added action to set linuxadmin passwort for a patchclass
+
+ -- Frank Schiebel <frank@linuxmuster.net>  Sat, 26 Nov 2016 17:52:57 +0100
+
+linuxmuster-client-servertools (0.6) precise; urgency=low
+
+  * Get md5sums and the signature
+  * Added pubkey for signature verification
+
+ -- Frank Schiebel <frank@linuxmuster.net>  Mon, 21 Nov 2016 18:58:38 +0100
+
 linuxmuster-client-servertools (0.5-babo1) babo; urgency=low
 
   * Hardwareklasse als Patchklasse möglich: Gleiches cloop, verschiedene

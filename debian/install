@@ -1,4 +1,4 @@
 usr/sbin/*          /usr/sbin/
+usr/lib/*	    /usr/lib/
 usr/share/*         /usr/share/
-var/*               /var/
 etc/*               /etc/

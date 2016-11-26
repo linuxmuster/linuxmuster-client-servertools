@@ -1,1 +1,2 @@
 #!/bin/bash
+gpg --import /usr/share/linuxmuster-client-servertools/cloop-signing-key.gpg.pub

@@ -26,9 +26,10 @@ check_startup
 HWCLASS=$CONF_HWCLASS
 CLOOP_NAME=$CONF_DEFAULT_CLOOP_NAME
 PATCHCLASS=$CONF_DEFAULT_PATCHCLASS
+PATCHCLASS_SET=0
 
 # Optionen verarbeiten
-while getopts ":a:h:c:p:" opt; do
+while getopts ":a:h:c:p:l:" opt; do
 case $opt in
     a)
         ACTION=$OPTARG
@@ -39,9 +40,13 @@ case $opt in
     c)
         CLOOP_NAME=$OPTARG
         ;;
-    p)
+    p)	
+	PATCHCLASS_SET=1
         PATCHCLASS=$OPTARG
         ;;
+    l)
+	LAPASS=$OPTARG
+	;;
     \?)
         print_help
         ;;
@@ -59,6 +64,12 @@ get-cloop)
     ;;
 configure)
     configure_cloop $CLOOP_NAME
+    ;;
+set-postsync-pass)
+    if [ $PATCHCLASS_SET -eq 0 ]; then 
+	PATCHCLASS=""
+    fi
+    set_password_to_postsync $PATCHCLASS
     ;;
 update-available)
     get_available_images
