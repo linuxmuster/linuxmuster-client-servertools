@@ -1,9 +1,10 @@
-linuxmuster-client-servertools (0.6.4) precise; urgency=low
+linuxmuster-client-servertools (0.7) babo; urgency=low
 
   * Moved postsync-template to /usr/lib/linuxmuster-client-servertools
   * Added action to set linuxadmin passwort for a patchclass
   * Moved functions to mail script for a KISS approach
   * Added auto-Action
+  * Publish in babo
 
  -- Frank Schiebel <frank@linuxmuster.net>  Sat, 26 Nov 2016 17:52:57 +0100
 

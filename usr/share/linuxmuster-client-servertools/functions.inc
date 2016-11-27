@@ -40,7 +40,7 @@ echo -e "${open}$2${close}"
 #
 function exit_error {
     if [ "x$1" != "x" ]; then 
-        echo $1
+        colorecho red $1
     fi
     exit 1
 }
@@ -56,41 +56,64 @@ Anwendung:
 Aktionsauswahl:
     -a auto      
         Automatischer Modus, versucht das cloop aus dem Netz vollautomatisch zu installieren
+	Es müssen zwei weitere Optionen angegeben werden:
+	    -c <cloopName>  wie im Listing der verfügbaren Cloops angezeigt.
+	    -H <HWKlasse>   eine nicht existierende HW-Klasse, für die das Cloop 
+                            konfiguriert wird.
     -a get-cloop 
-        Holt ein cloop aus dem Netz und speichert die nÃ¶tigen dateien in /var/linbo/ ab. 
+        Holt ein cloop aus dem Netz und speichert die nötigen dateien in /var/linbo/ ab. 
         Bei Konflikten mit vorhandenen Dateien wird der Benutzer informiert, es werden
-        keine Daten Ã¼berschrieben 
+        keine Daten überschrieben 
     -a configure  
         Bereitet ein heruntergeladenes cloop-Dateiset mit einem passenden postsync 
         Skript zur Synchronisation auf Clients vor
     -a update-available
-        Holt eine Liste verfÃ¼gbarer cloops vom server
+        Aktualisiert die Liste verfügbarer cloops vom Server.
     -a list-available
-        Listet die verfÃ¼gbaren cloops auf. Aktualisiert zuvor die Liste der verfÃ¼gbaren 
-        cloops vom Server  
+        Listet die verfügbaren cloops auf. Aktualisiert zuvor die Liste der verfügbaren 
+        cloops vom Server.  
     -a set-postsync-pass
         Setzt das Passwort des Benutzers linuxadmin bei der mit der Option -p angegebenen
 	Patchklasse auf den Wert in der Konfigurationsdatei. Wird mit der Option -l ein 
-	Passwort Ãbergeben, wird dieses fÃr die angegebene Patchklasse gesetzt.
+	Passwort Ãbergeben, wird dieses für die angegebene Patchklasse gesetzt.
 
 Optionen:
     -h <Hardware-Klasse>  
-        Legt unter verwendung des heruntergeladenen cloops 
+            Legt unter verwendung des heruntergeladenen cloops 
             eine Konfiguration mit dem angegebenen Namen an.
-            Standard ist "ubuntuclient"
-        -c <cloop-Dateiname>
+    -c <cloop-Dateiname>
             Kann bei der Aktion "configure" angegeben werden. Name der 
             cloop-Datei ohne den Pfad /var/linbo
-        -p <patchklasse> 
+    -p <patchklasse> 
             Legt die Standard-Postyncpatches im UVZ /var/linbo/linuxmuster-client/<patchklasse> an.
+    -l <Passwort>
+            Ermöglicht es, das Passwort einer Patchklasse manuell zu setzen. 
 
     Beispiele:
+
+     $0 -a auto -H myxenial -c xenial916
+    
+     Holt das Image "xenial916" vom linuxmuster-Server und legt anschließend eine HW-Klasse "myxenial" an, 
+     die das Image verwendet. 
+     Die Postsync-Einstellungen und Skripte werden im Verzeichnis
+        /var/linbo/linuxmuster-client/myxenial/
+     angelegt. 
+     Das Passwort für linuxadmin wird bei der Synchronisation auf den in der Konfigurationsdatei 
+     vorgegebenen Wert gesetzt.
+
+
+     $0 -a set-postsync-pass -l geheim -p mypatchclass
+
+     Ändert das Passwort des linuxadmin für das Cloop, dessen Postsync-Skripte im Verzeichnis 
+         /var/linbo/linuxmuster-client/mypatchclass/
+     liegen auf den Wert "geheim"
+
 
      $0 -a configure -h myubuntu -p mypatches -c trusty714.cloop
 
      Konfiguriert das vorhandene Cloop trusty714.cloop als 
      linbo-Grupp "myubuntu" mit einem universellen postsync Skript, 
-     verwendet dafÃ¼r das Patchklassenverzeichnis 
+     verwendet dafür das Patchklassenverzeichnis 
      /var/linbo/linuxmuster-client/mypatches 
 End-of-help
 }
@@ -98,7 +121,7 @@ End-of-help
 
 #
 # Einige Checks, die vor dem Start des eigentlichen 
-# Skripts ausgefÃ¼hrt werden
+# Skripts ausgeführt werden
 #
 function check_startup {
     # Are we root?
@@ -115,18 +138,18 @@ function check_startup {
 }
 
 # 
-# Aktualisiert die Liste der aktuell verfÃ¼gbaren Online-Image
+# Aktualisiert die Liste der aktuell verfügbaren Online-Image
 # 
 function get_available_images {
     if [ -d /var/cache/linuxmuster-client-servertools/ ]; then 
         rm -rf /var/cache/linuxmuster-client-servertools/
     fi
-    echo  -n "Hole Liste der verfÃ¼gbaren cloops..."
+    echo  -n "Hole Liste der verfügbaren cloops..."
     wget --mirror -A.txt -np -P /var/cache/linuxmuster-client-servertools http://cloop.linuxmuster.net/meta/ > /dev/null 2>&1 && colorecho "green" "OK"
 }
 
 # 
-# Listet die  aktuell verfÃ¼gbaren Online-Images au, wenn kein Argument uebergeben wird
+# Listet die  aktuell verfügbaren Online-Images au, wenn kein Argument uebergeben wird
 # Wenn eine Argument uebergeben wird, wird getestet, ob es ein Image 
 # mit diesem Namen gibt.
 #
@@ -196,7 +219,7 @@ function get_source_fileset {
 
 
 #
-# UeberprÃ¼ft, ob die geplanten Zieldateien schon existieren
+# Ueberprüft, ob die geplanten Zieldateien schon existieren
 # @Argumente
 # $1 hardwareklasse
 # @Anwendung
@@ -211,7 +234,7 @@ function check_target_fileset {
         fi
     done
     if [ "x$stop" == "x1" ]; then 
-        colorecho "red" "Werde keine Dateien Ã¼berschreiben, lÃ¶sen Sie den Konflikt bitte zuerst auf"
+        colorecho "red" "Werde keine Dateien überschreiben, lösen Sie den Konflikt bitte zuerst auf"
         exit 1
     fi
 }
