@@ -1,9 +1,10 @@
+#!/bin/bash
+
 # Funktionsbibliothek für die serverseitigen 
 # Clientscripte zur Integration eines Community-Cloops
-# Jesko Anschütz <jesko.anschuetz@linuxmuster.net>
+# GPL V3
 # Frank Schiebel <frank@linuxmuster.net>
-# Version 01 09.12.2014
-# GPL v3
+# Jesko Anschuetz <jesko|linuxmuster.net>
 
 #
 # Farbige Ausgabe
@@ -33,6 +34,17 @@ esac
 echo -e "${open}$2${close}"
 
 }
+
+#
+# Beendet das Skriptz mit einem Fehler
+#
+function exit_error {
+    if [ "x$1" != "x" ]; then 
+        echo $1
+    fi
+    exit 1
+}
+
 
 # 
 # Gibt einen Hilfetext aus
@@ -84,41 +96,48 @@ End-of-help
 }
 
 
-    #
-    # Einige Checks, die vor dem Start des eigentlichen 
-    # Skripts ausgeführt werden
-    #
-    function check_startup {
-        # Are we root?
-        if [[ ! "$USER" == "root" ]]; then
-            echo "Dieses Skript muss als root laufen. Abbruch."
-            exit 1
-        fi
+#
+# Einige Checks, die vor dem Start des eigentlichen 
+# Skripts ausgeführt werden
+#
+function check_startup {
+    # Are we root?
+    if [[ ! "$USER" == "root" ]]; then
+        echo "Dieses Skript muss als root laufen. Abbruch."
+        exit 1
+    fi
 
-        # Gibt es das linbo-Verzeichnis?
-        if [[ ! -d ${CONF_LINBODIR} ]]; then
-            echo "Das angegebene Linboverzeichnis existiert nicht. Abbruch"
-            exit 1
-        fi
-    }
+    # Gibt es das linbo-Verzeichnis?
+    if [[ ! -d ${CONF_LINBODIR} ]]; then
+        echo "Das angegebene Linboverzeichnis existiert nicht. Abbruch"
+        exit 1
+    fi
+}
 
-    # 
-    # Aktualisiert die Liste der aktuell verfügbaren Online-Images
-    # 
-    function get_available_images {
-        if [ -d /var/cache/linuxmuster-client-servertools/ ]; then 
-            rm -rf /var/cache/linuxmuster-client-servertools/
-        fi
-        echo  -n "Hole Liste der verfügbaren cloops..."
-        wget --mirror -A.txt -np -P /var/cache/linuxmuster-client-servertools http://cloop.linuxmuster.net/meta/ > /dev/null 2>&1 && colorecho "green" "OK"
-    }
+# 
+# Aktualisiert die Liste der aktuell verfügbaren Online-Image
+# 
+function get_available_images {
+    if [ -d /var/cache/linuxmuster-client-servertools/ ]; then 
+        rm -rf /var/cache/linuxmuster-client-servertools/
+    fi
+    echo  -n "Hole Liste der verfügbaren cloops..."
+    wget --mirror -A.txt -np -P /var/cache/linuxmuster-client-servertools http://cloop.linuxmuster.net/meta/ > /dev/null 2>&1 && colorecho "green" "OK"
+}
 
-    # 
-    # Listet die  aktuell verfügbaren Online-Images auf
-    # 
-    function list_available_images {
-        get_available_images
-        desc_files=$(find /var/cache/linuxmuster-client-servertools/ -name 'description.txt')
+# 
+# Listet die  aktuell verfügbaren Online-Images au, wenn kein Argument uebergeben wird
+# Wenn eine Argument uebergeben wird, wird getestet, ob es ein Image 
+# mit diesem Namen gibt.
+#
+# $1 Imagename
+# 
+function list_available_images {
+    get_available_images
+    
+    desc_files=$(find /var/cache/linuxmuster-client-servertools/ -name 'description.txt')
+
+    if [ "x$1" == "x" ]; then  
         echo 
         echo "Imagename                 Info"
         echo "-----------------------------------------------"
@@ -129,88 +148,97 @@ End-of-help
         done
         echo "-----------------------------------------------"
         echo 
-    }
-
-    #
-    # Erzeugt ein Array mit den Zieldateien
-    # @Argumente
-    # $1 hardwareklasse
-    # @Anwendung
-    # get_target_fileset mylinux
-    #
-    function get_target_fileset {
-        TARGET_FILESET["startconf"]=${CONF_LINBODIR}/start.conf.$1 
-        TARGET_FILESET["cloop"]=${CONF_LINBODIR}/$1.cloop 
-        for key in postsync desc macct; do 
-            TARGET_FILESET["$key"]=${CONF_LINBODIR}/$1.cloop.$key 
-        done
-        for key in md5sums md5sig; do 
-            TARGET_FILESET["$key"]=${CONF_LINBODIR}/$1_hashes.$key 
-        done
-    }
-
-    #
-    # Erzeugt ein Array mit den Quelldateien
-    # @Argumente
-    # $1 Remote cloop Name
-    # @Anwendung
-    # get_source_fileset trusty714
-    #
-    function get_source_fileset {
-        SOURCE_FILESET["startconf"]=start.conf.$1 
-        SOURCE_FILESET["cloop"]=$1.cloop 
-        SOURCE_FILESET["md5sums"]=md5sums 
-        SOURCE_FILESET["md5sig"]=md5sums.sig 
-        for key in postsync desc macct; do 
-            SOURCE_FILESET["$key"]=$1.cloop.$key 
-        done
-    }
-
-
-    #
-    # Ueberprüft, ob die geplanten Zieldateien schon existieren
-    # @Argumente
-    # $1 hardwareklasse
-    # @Anwendung
-    # check_conflicting_files mylinux
-    #
-    function check_target_fileset {
-        stop="0";
-        for key in startconf cloop postsync desc macct; do 
-            if [ -e ${TARGET_FILESET["$key"]} ]; then 
-                echo "Die Datei ${TARGET_FILESET["$key"]}  existiert bereits."
-                stop="1"
+    else 
+        for desc in $desc_files; do
+            name=$(grep ^Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+            if [ "$1" == "$name" ]; then 
+                return 0
             fi
         done
-        if [ "x$stop" == "x1" ]; then 
-            colorecho "red" "Werde keine Dateien überschreiben, lösen Sie den Konflikt bitte zuerst auf"
-            exit 1
+        return 1
+    fi
+}
+
+#
+# Erzeugt ein Array mit den Zieldateien
+# @Argumente
+# $1 hardwareklasse
+# @Anwendung
+# get_target_fileset mylinux
+#
+function get_target_fileset {
+    TARGET_FILESET["startconf"]=${CONF_LINBODIR}/start.conf.$1 
+    TARGET_FILESET["cloop"]=${CONF_LINBODIR}/$1.cloop 
+    for key in postsync desc macct; do 
+        TARGET_FILESET["$key"]=${CONF_LINBODIR}/$1.cloop.$key 
+    done
+    for key in md5sums md5sig; do 
+        TARGET_FILESET["$key"]=${CONF_LINBODIR}/$1_hashes.$key 
+    done
+}
+
+#
+# Erzeugt ein Array mit den Quelldateien
+# @Argumente
+# $1 Remote cloop Name
+# @Anwendung
+# get_source_fileset trusty714
+#
+function get_source_fileset {
+    SOURCE_FILESET["startconf"]=start.conf.$1 
+    SOURCE_FILESET["cloop"]=$1.cloop 
+    SOURCE_FILESET["md5sums"]=md5sums 
+    SOURCE_FILESET["md5sig"]=md5sums.sig 
+    for key in desc macct; do 
+        SOURCE_FILESET["$key"]=$1.cloop.$key 
+    done
+}
+
+
+#
+# Ueberprüft, ob die geplanten Zieldateien schon existieren
+# @Argumente
+# $1 hardwareklasse
+# @Anwendung
+# check_conflicting_files mylinux
+#
+function check_target_fileset {
+    stop="0";
+    for key in startconf cloop desc macct; do 
+        if [ -e ${TARGET_FILESET["$key"]} ]; then 
+            echo "Die Datei ${TARGET_FILESET["$key"]}  existiert bereits."
+            stop="1"
         fi
-    }
+    done
+    if [ "x$stop" == "x1" ]; then 
+        colorecho "red" "Werde keine Dateien überschreiben, lösen Sie den Konflikt bitte zuerst auf"
+        exit 1
+    fi
+}
 
-    #
-    # Hole die Cloop-Dateien vom cloop-Server
-    # @Argumente
-    # $1  Hardwareklasse
-    # $2 Remote Cloop Name
-    #
-    function get_remote_cloop {
-        get_target_fileset $1
-        cloop_name=${2%.cloop}
-        get_source_fileset $cloop_name
-        check_target_fileset
+#
+# Hole die Cloop-Dateien vom cloop-Server
+# @Argumente
+# $1  Hardwareklasse
+# $2 Remote Cloop Name
+#
+function get_remote_cloop {
+    get_target_fileset $1
+    cloop_name=${2%.cloop}
+    get_source_fileset $cloop_name
+    check_target_fileset
 
-        for key in startconf cloop postsync desc macct md5sums md5sig; do 
-            echo "Hole ${TARGET_FILESET[$key]} von"
-            echo "     ${CONF_CLOOP_SERVER}/cloops/$cloop_name/${SOURCE_FILESET[$key]}"
-            if wget ${CONF_CLOOP_SERVER}/cloops/$cloop_name/${SOURCE_FILESET[$key]} -O ${TARGET_FILESET[$key]}; then 
-                colorecho "green" "Success."
-            else 
-                colorecho "red" "Failed"
-                rm -f ${TARGET_FILESET[$key]}
-            fi
-        done
-    }
+    for key in startconf cloop desc macct md5sums md5sig; do 
+        echo "Hole ${TARGET_FILESET[$key]} von"
+        echo "     ${CONF_CLOOP_SERVER}/cloops/$cloop_name/${SOURCE_FILESET[$key]}"
+        if wget ${CONF_CLOOP_SERVER}/cloops/$cloop_name/${SOURCE_FILESET[$key]} -O ${TARGET_FILESET[$key]}; then 
+            colorecho "green" "Success."
+        else 
+            colorecho "red" "Failed"
+            rm -f ${TARGET_FILESET[$key]}
+        fi
+    done
+}
 
 #
 # Sets password hash to posytsync file
@@ -271,7 +299,9 @@ function configure_cloop {
         echo "INFO: Sichere $STARTCONF nach $STARTCONF ${STARTCONF}.$ts.autobackup"
         cp $STARTCONF ${STARTCONF}.$ts.autobackup
     fi
-    cp $STARTCONF_SRC $STARTCONF
+    if [  "$STARTCONF_SRC" != "$STARTCONF" ]; then 
+    	cp $STARTCONF_SRC $STARTCONF
+    fi
 
     echo "INFO: Passe $STARTCONF an"
 
