@@ -9,10 +9,10 @@
 
 # Konfiguration lesen
 . /etc/linuxmuster/client-servertools.conf || exit 1
+# Funtionen einbinden
+. /usr/share/linuxmuster-client-servertools/functions.inc || exit 1
 # Netzwerkparameter linuxmuster.net
 . /var/lib/linuxmuster/network.settings || exit 1
-# Hilfsfunktionen einbinden
-. $CONF_HELPERFUNCTIONS || exit 1
 
 # deklaration der globalen arrays
 declare -A TARGET_FILESET
@@ -21,14 +21,11 @@ declare -A SOURCE_FILESET
 # Sanity checks beim skriptstart
 check_startup
 
-# Default Hardwareklasse aus der Konfiguration
-# kann durch Optio -h überschrieben werden
-HWCLASS=$CONF_HWCLASS
-CLOOP_NAME=$CONF_DEFAULT_CLOOP_NAME
-PATCHCLASS=$CONF_DEFAULT_PATCHCLASS
+PATCHCLASS_SET=0
+COMMONCLASS=""
 
 # Optionen verarbeiten
-while getopts ":a:h:c:p:" opt; do
+while getopts ":a:h:c:p:l:H:" opt; do
 case $opt in
     a)
         ACTION=$OPTARG
@@ -39,8 +36,15 @@ case $opt in
     c)
         CLOOP_NAME=$OPTARG
         ;;
-    p)
+    p)	
+	PATCHCLASS_SET=1
         PATCHCLASS=$OPTARG
+        ;;
+    l)
+	LAPASS=$OPTARG
+	;;
+    H)
+        COMMONCLASS=$OPTARG 
         ;;
     \?)
         print_help
@@ -51,14 +55,37 @@ done
 
 case $ACTION in
 auto)
-    colorecho "red" "Automodus: $ACTION $HWCLASS"
-    colorecho "red" "NOT IMPLEMENTED YET"
+    if [ "x$COMMONCLASS" == "x" ]; then 
+        exit_error "Die Option -H <hardwareklasse> muss angegeben werden."
+    fi
+    if [ "x$CLOOP_NAME" == "x" ]; then
+        exit_error "Die Option -c <CloopName> muss angegeben werden."
+    fi 
+
+    list_available_images $CLOOP_NAME || exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."
+
+    HWCLASS=$COMMONCLASS
+    PATCHCLASS_SET=1
+    PATCHCLASS=$COMMONCLASS
+
+
+    # Cloop herunterladen
+    get_remote_cloop $HWCLASS $CLOOP_NAME
+    # Cloop konfigurieren
+    configure_cloop ${COMMONCLASS}.cloop
+
     ;;
 get-cloop)
     get_remote_cloop $HWCLASS $CLOOP_NAME
     ;;
 configure)
     configure_cloop $CLOOP_NAME
+    ;;
+set-postsync-pass)
+    if [ $PATCHCLASS_SET -eq 0 ]; then 
+	PATCHCLASS=""
+    fi
+    set_password_to_postsync $PATCHCLASS
     ;;
 update-available)
     get_available_images
