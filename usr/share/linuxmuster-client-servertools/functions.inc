@@ -40,7 +40,7 @@ echo -e "${open}$2${close}"
 #
 function exit_error {
     if [ "x$1" != "x" ]; then 
-        colorecho red $1
+        colorecho red "$1"
     fi
     exit 1
 }
