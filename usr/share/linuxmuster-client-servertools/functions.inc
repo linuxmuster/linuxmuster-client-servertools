@@ -54,13 +54,13 @@ cat <<End-of-help
 Anwendung:
     $0 [-a action]
 Aktionsauswahl:
-    -a auto      
+    -a auto -c <cloop-name> -H <hardware-class>
         Automatischer Modus, versucht das cloop aus dem Netz vollautomatisch zu installieren
 	Es müssen zwei weitere Optionen angegeben werden:
-	    -c <cloopName>  wie im Listing der verfügbaren Cloops angezeigt.
+	    -c <cloop-name>  wie im Listing der verfügbaren Cloops angezeigt.
 	    -H <HWKlasse>   eine nicht existierende HW-Klasse, für die das Cloop 
                             konfiguriert wird.
-    -a get-cloop 
+    -a get-cloop -c <cloop-name> -H <hardware-class>
         Holt ein cloop aus dem Netz und speichert die nötigen dateien in /var/linbo/ ab. 
         Bei Konflikten mit vorhandenen Dateien wird der Benutzer informiert, es werden
         keine Daten überschrieben 
@@ -78,7 +78,7 @@ Aktionsauswahl:
 	Passwort übergeben, wird dieses für die angegebene Patchklasse gesetzt.
 
 Optionen:
-    -h <Hardware-Klasse>  
+    -H <hardware-class>  
             Legt unter verwendung des heruntergeladenen cloops 
             eine Konfiguration mit dem angegebenen Namen an.
     -c <cloop-Dateiname>
@@ -109,10 +109,10 @@ Optionen:
      liegen auf den Wert "geheim"
 
 
-     $0 -a configure -h myubuntu -p mypatches -c trusty714.cloop
+     $0 -a configure -H myubuntu -p mypatches -c trusty714.cloop
 
      Konfiguriert das vorhandene Cloop trusty714.cloop als 
-     linbo-Grupp "myubuntu" mit einem universellen postsync Skript, 
+     Hardwareklasse "myubuntu" mit einem universellen postsync Skript, 
      verwendet dafür das Patchklassenverzeichnis 
      /var/linbo/linuxmuster-client/mypatches 
 End-of-help

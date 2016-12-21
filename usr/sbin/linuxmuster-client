@@ -25,13 +25,10 @@ PATCHCLASS_SET=0
 COMMONCLASS=""
 
 # Optionen verarbeiten
-while getopts ":a:h:c:p:l:H:" opt; do
+while getopts ":a:c:p:l:H:" opt; do
 case $opt in
     a)
         ACTION=$OPTARG
-        ;;
-    h)
-        HWCLASS=$OPTARG
         ;;
     c)
         CLOOP_NAME=$OPTARG
@@ -44,7 +41,7 @@ case $opt in
 	LAPASS=$OPTARG
 	;;
     H)
-        COMMONCLASS=$OPTARG 
+        HWCLASS=$OPTARG
         ;;
     \?)
         print_help
@@ -56,7 +53,7 @@ done
 
 case $ACTION in
 auto)
-    if [ "x$COMMONCLASS" == "x" ]; then 
+    if [ "x$HWCLASS" == "x" ]; then 
         exit_error "Die Option -H <hardwareklasse> muss angegeben werden."
     fi
     if [ "x$CLOOP_NAME" == "x" ]; then
@@ -65,18 +62,24 @@ auto)
 
     list_available_images $CLOOP_NAME || exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."
 
-    HWCLASS=$COMMONCLASS
     PATCHCLASS_SET=1
-    PATCHCLASS=$COMMONCLASS
+    PATCHCLASS=$HWCLASS
 
 
     # Cloop herunterladen
     get_remote_cloop $HWCLASS $CLOOP_NAME
     # Cloop konfigurieren
-    configure_cloop ${COMMONCLASS}.cloop
+    configure_cloop ${HWCLASS}.cloop
 
     ;;
 get-cloop)
+    if [ "x$HWCLASS" == "x" ]; then 
+        exit_error "Die Option -H <hardwareklasse> muss angegeben werden."
+    fi
+    if [ "x$CLOOP_NAME" == "x" ]; then
+        exit_error "Die Option -c <CloopName> muss angegeben werden."
+    fi 
+    list_available_images $CLOOP_NAME || exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."
     get_remote_cloop $HWCLASS $CLOOP_NAME
     ;;
 configure)
