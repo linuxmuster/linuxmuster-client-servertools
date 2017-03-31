@@ -1,4 +1,4 @@
-linuxmuster-client-servertools (0.8) babo; urgency=low
+linuxmuster-client-servertools (0.9) babo; urgency=low
 
   * Added consolidate -H (remove -h)
   * Added wget -c to continue downloads
@@ -15,15 +15,15 @@ linuxmuster-client-servertools (0.8) babo; urgency=low
 
  -- Tobias Küchel <t.kuechel@humboldt-ka.de>  Fri, 31 Mar 2017 17:52:57 +0100
 
-linuxmuster-client-servertools (0.7) babo; urgency=low
+linuxmuster-client-servertools (0.8) babo; urgency=low
 
   * Moved postsync-template to /usr/lib/linuxmuster-client-servertools
   * Added action to set linuxadmin passwort for a patchclass
-  * Moved functions to mail script for a KISS approach
   * Added auto-Action
   * Publish in babo
+  * Metrged pull request #2
 
- -- Frank Schiebel <frank@linuxmuster.net>  Sat, 26 Nov 2016 17:52:57 +0100
+ -- Frank Schiebel <frank@linuxmuster.net>  Sun, 15 Dec 2017 17:52:57 +0100
 
 linuxmuster-client-servertools (0.6) precise; urgency=low
 
