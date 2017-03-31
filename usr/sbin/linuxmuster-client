@@ -23,9 +23,10 @@ check_startup
 
 PATCHCLASS_SET=0
 COMMONCLASS=""
+FORCE=0
 
 # Optionen verarbeiten
-while getopts ":a:c:p:l:H:" opt; do
+while getopts ":a:c:fp:H:" opt; do
 case $opt in
     a)
         ACTION=$OPTARG
@@ -33,15 +34,18 @@ case $opt in
     c)
         CLOOP_NAME=$OPTARG
         ;;
-    p)	
-	PATCHCLASS_SET=1
-        PATCHCLASS=$OPTARG
-        ;;
-    l)
+    f)
+	FORCE=1
+	;;
+#    P)	
+#	PATCHCLASS_SET=1
+#        PATCHCLASS=$OPTARG
+#        ;;
+    p)
 	LAPASS=$OPTARG
 	;;
     H)
-        HWCLASS=$OPTARG
+        HOSTGROUP=$OPTARG
         ;;
     \?)
         print_help
@@ -53,46 +57,48 @@ done
 
 case $ACTION in
 auto)
-    if [ "x$HWCLASS" == "x" ]; then 
-        exit_error "Die Option -H <hardwareklasse> muss angegeben werden."
-    fi
     if [ "x$CLOOP_NAME" == "x" ]; then
-        exit_error "Die Option -c <CloopName> muss angegeben werden."
+        exit_error "Die Option -c <Imagename> muss angegeben werden. $0 -h für weitere Hilfe."
     fi 
+    # Hardwareklasse wird CLOOP_NAME verwendet, außer es wurde gesetzt
+    HOSTGROUP=${HOSTGROUP:-$CLOOP_NAME}
+    list_available_images $CLOOP_NAME || { list_available_images; exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."; }
 
-    list_available_images $CLOOP_NAME || exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."
-
-    PATCHCLASS_SET=1
-    PATCHCLASS=$HWCLASS
-
+    #PATCHCLASS_SET=1
+    #PATCHCLASS=$HOSTGROUP
 
     # Cloop herunterladen
-    get_remote_cloop $HWCLASS $CLOOP_NAME
+    get_remote_cloop $HOSTGROUP $CLOOP_NAME
     # Cloop konfigurieren
-    configure_cloop ${HWCLASS}.cloop
+    configure_cloop ${HOSTGROUP} $CLOOP_NAME
 
     ;;
 get-cloop)
-    if [ "x$HWCLASS" == "x" ]; then 
-        exit_error "Die Option -H <hardwareklasse> muss angegeben werden."
-    fi
     if [ "x$CLOOP_NAME" == "x" ]; then
-        exit_error "Die Option -c <CloopName> muss angegeben werden."
+        exit_error "Die Option -c <Imagename> muss angegeben werden. $0 -h für weitere Hilfe."
     fi 
-    list_available_images $CLOOP_NAME || exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."
-    get_remote_cloop $HWCLASS $CLOOP_NAME
+    # Hardwareklasse wird CLOOP_NAME verwendet, außer es wurde gesetzt
+    HOSTGROUP=${HOSTGROUP:-$CLOOP_NAME}
+    list_available_images $CLOOP_NAME || { list_available_images; exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."; }
+    get_remote_cloop $HOSTGROUP $CLOOP_NAME
     ;;
 configure)
-    configure_cloop $CLOOP_NAME
+    if [ "x$CLOOP_NAME" == "x" ]; then
+        exit_error "Die Option -c <Imagename> muss angegeben werden. $0 -h für weitere Hilfe."
+    fi 
+    # Hardwareklasse wird CLOOP_NAME verwendet, außer es wurde gesetzt
+    HOSTGROUP=${HOSTGROUP:-$CLOOP_NAME}
+    configure_cloop $HOSTGROUP $CLOOP_NAME
     ;;
 set-postsync-pass)
-    if [ $PATCHCLASS_SET -eq 0 ]; then 
-	PATCHCLASS=""
-    fi
+    if [ "x$HOSTGROUP" == "x" ]; then
+        exit_error "Die Option -H <hardware-class> muss angegeben werden. $0 -h für weitere Hilfe."
+    fi 
+    #if [ $PATCHCLASS_SET -eq 0 ]; then 
+    #	PATCHCLASS=""
+    #fi
+    PATCHCLASS=$HOSTGROUP
     set_password_to_postsync $PATCHCLASS
-    ;;
-update-available)
-    get_available_images
     ;;
 list-available)
     list_available_images

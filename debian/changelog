@@ -1,3 +1,20 @@
+linuxmuster-client-servertools (0.8) babo; urgency=low
+
+  * Added consolidate -H (remove -h)
+  * Added wget -c to continue downloads
+  * Added -f to force overwrite files
+  * Renamed the option -l to -p for password
+  * Hiding the option to set the password alone
+  * Added checking of the md5sums 
+  * Removed update-available, unnecessary as command
+  * Rename variable HWCLASS to HOSTGROUP consistently
+  * Renamed exit1 to exit_error consistently
+  * Changed the copying of all ssh-keys to the client
+  * Changed the default password to "muster" analogous to the XEN-VMs
+  * Changed the encoding to utf-8
+
+ -- Tobias Küchel <t.kuechel@humboldt-ka.de>  Fri, 31 Mar 2017 17:52:57 +0100
+
 linuxmuster-client-servertools (0.7) babo; urgency=low
 
   * Moved postsync-template to /usr/lib/linuxmuster-client-servertools
