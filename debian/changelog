@@ -1,6 +1,10 @@
 linuxmuster-client-servertools (0.9) babo; urgency=low
 
+  [ Frank Schiebel ]
   * New branch for lmn v7
+
+  [ Tobias Küchel ]
+  * added pull requests from v6 here as well
 
  -- Frank Schiebel <frank@linuxmuster.net>  Sun, 17 Nov 2019 08:25:57 +0100
 
