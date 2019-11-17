@@ -58,6 +58,7 @@ echo " - patching local files"  | tee -a $LOG
 if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/common ]; then 
     echo "   - patching common to /mnt" | tee -a $LOG
     cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/common/* /mnt/ | tee -a $LOG
+    rsync --delete -lr /cache/${PATCHCACHE}/${PATCHCLASS}/common/postsync.d/ /mnt/postsync.d/ | tee -a $LOG
 fi
 
 # tarpacks
