@@ -109,7 +109,7 @@ if [ -d /mnt/postsync.d ]; then
         chmod 755 $SCRIPT
         echo "Executing: $SCRIPT" | tee -a $LOG
         #$SCRIPT > /dev/null 2>&1
-        $SCRIPT | tee -a $LOG
+        . $SCRIPT | tee -a $LOG
         echo " ...done." | tee -a $LOG
     done
     rm -rf /mnt/postsync.d
