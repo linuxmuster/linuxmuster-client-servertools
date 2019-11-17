@@ -119,7 +119,13 @@ fi
 rm -rf /mnt/tarpacks
 
 # Zeitstempel letzter sync hinterlegen
-echo $NOW > /mnt/lastsync
+echo $NOW > /mnt/.lastsync
+# Hostgroup hinterlegen
+echo ${HOSTGROUP} > /mnt/.hostgroup
+# /mnt/.linbo wurde von Linbo hinterlegt
+image=$(cat /mnt/.linbo)
+# Image Beschreibung hinterlegen
+cp /cache/${image}.cloop.desc /mnt/.description
 
 echo "##### POSTSYNC END #####" | tee -a $LOG
 
