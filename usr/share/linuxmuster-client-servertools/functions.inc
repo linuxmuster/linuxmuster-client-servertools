@@ -36,7 +36,7 @@ echo -e "${open}$2${close}"
 }
 
 #
-# Beendet das Skriptz mit einem Fehler
+# Beendet das Skript mit einem Fehler
 #
 function exit_error {
     if [ "x$1" != "x" ]; then 

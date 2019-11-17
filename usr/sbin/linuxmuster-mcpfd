@@ -1,0 +1,111 @@
+#!/bin/bash
+
+STARTCONF=$1
+TARGETNAME=$2
+TEMPDIR=$(mktemp -d -p .)
+#TEMPDIR=/tmp/tmp.eXgIKvgX7s
+
+if [ "x$STARTCONF" == "x" ]; then 
+    echo "[ERROR] The start conf "
+    exit 1
+fi
+
+if [ "x$TARGETNAME" == "x" ]; then 
+    echo "[ERROR] A target name for the package has to be given."
+    exit 1
+fi
+
+
+if [ ! -f $STARTCONF ]; then
+    echo "[ERROR] Cannot open $STARTCONF"
+    exit 1
+fi
+
+
+NUMOS=$(grep "\[OS\]" $STARTCONF | wc -l)
+
+if [ $NUMOS -gt 1 ]; then 
+
+echo "[ERROR] $NUMOS OS definitions found in $STARTCONF" 
+    cat <<MESSAGE
+ Only a configuration with exactly one OS definition can be used to create
+ a cloop package. Please change your start.conf accordingly.
+MESSAGE
+    exit 1
+fi
+
+CLOOP=$(grep ^BaseImage $STARTCONF | awk -F"=" '{print $2}' | xargs)
+IMAGE=$(grep ^Image $STARTCONF  | awk -F"=" '{print $2}' | xargs)
+POSTSYNC=${CLOOP}.postsync
+
+if [ "x$IMAGE" != "x" ]; then
+    echo "[ERROR] There is an rsync image in your config."
+    exit 1
+fi
+
+
+if [ ! -f $POSTSYNC ]; then
+    echo "[ERROR] Cannot open $POSTSYNC"
+    exit 1
+fi
+
+PATCHCLASS=$(grep ^PATCHCLASS $POSTSYNC | awk -F"=" '{print $2}' | sed -e 's/"//g' )
+
+FilesToPack="${CLOOP} ${CLOOP}.info ${CLOOP}.desc"
+DirToPack="/var/linbo/linuxmuster-client/$PATCHCLASS"
+
+TarFile=${TARGETNAME}.tar
+HWCLASS=$(echo $STARTCONF | sed -e "s/start\.conf\.//")
+
+echo "Information:"
+echo " Cloop name:     $CLOOP"
+echo " Hardware class: $HWCLASS"
+echo " Patchclass:     $PATCHCLASS"
+echo 
+echo "Creating package..."
+
+STARTCONF_NEW=$(echo $STARTCONF | sed -e "s/$HWCLASS/$TARGETNAME/g")
+CLOOP_NEW=${TARGETNAME}.cloop
+
+echo " Adding $STARTCONF to package as $STARTCONF_NEW"
+cp $STARTCONF $TEMPDIR/$STARTCONF_NEW
+echo " Renaming cloop in $STARTCONF_NEW to $CLOOP_NEW"
+sed -i "s/$CLOOP/$CLOOP_NEW/g" $TEMPDIR/$STARTCONF_NEW
+echo " Adding $CLOOP to package as $CLOOP_NEW"
+cp $CLOOP $TEMPDIR/$CLOOP_NEW
+echo " Adding ${CLOOP}.info to package as ${CLOOP_NEW}.info"
+cp ${CLOOP}.info $TEMPDIR/${CLOOP_NEW}.info
+echo " Adding ${CLOOP}.desc to package as ${CLOOP_NEW}.desc"
+cp ${CLOOP}.desc $TEMPDIR/${CLOOP_NEW}.desc
+
+mkdir -p $TEMPDIR/linuxmuster-client/$TARGETNAME
+echo " Adding patchfiles to package"
+cp -r linuxmuster-client/$PATCHCLASS/* $TEMPDIR/linuxmuster-client/$TARGETNAME/
+
+echo " Create tar-package"
+cd $TEMPDIR
+tar -cf ../$TARGETNAME.clpkg.tar . 
+cd ..
+echo " Calculate package hash"
+md5sum $TARGETNAME.clpkg.tar > $TARGETNAME.clpkg.meta
+rm -rf $TEMPDIR
+echo "done."
+echo 
+echo "To publish this cloop to the comminuty, provide"
+echo "the files:"
+echo
+echo "  $TARGETNAME.clpkg.tar"
+echo "  $TARGETNAME.clpkg.meta"
+echo
+echo "to a maintainer who has write access to the"
+echo "download server."
+
+
+
+
+
+
+exit 0
+
+
+
