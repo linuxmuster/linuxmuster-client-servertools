@@ -5,6 +5,7 @@ linuxmuster-client-servertools (0.9) babo; urgency=low
 
   [ Tobias Küchel ]
   * added pull requests from v6 here as well
+  * fix package dependency for linbo7
 
  -- Frank Schiebel <frank@linuxmuster.net>  Sun, 17 Nov 2019 08:25:57 +0100
 
