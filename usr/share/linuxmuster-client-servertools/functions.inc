@@ -113,45 +113,47 @@ function check_startup {
 # Aktualisiert die Liste der aktuell verfügbaren Online-Image
 # 
 function get_available_images {
-    if [ -d /var/cache/linuxmuster/client-servertools/ ]; then 
-        rm -rf /var/cache/linuxmuster/client-servertools/*
-    fi
+    #if [ -d /var/cache/linuxmuster/client-servertools/ ]; then 
+    #    rm -rf /var/cache/linuxmuster/client-servertools/*
+    #fi
     echo  -n "Hole Liste der verfügbaren cloops..."
     wget --mirror -A.txt -np -P /var/cache/linuxmuster/client-servertools $CONF_CLOOP_SERVER > /dev/null 2>&1 && colorecho "green" "OK"
+    
 }
 
-# 
-# Listet die  aktuell verfügbaren Online-Images auf, wenn kein Argument uebergeben wird
-# Wenn eine Argument uebergeben wird, wird getestet, ob es ein Image 
-# mit diesem Namen gibt.
 #
-# $1 Imagename
+# Testet, ob ein Image mit diesem Namen (lokal) existiert
 # 
-function list_available_images {
-    get_available_images
-    
+# $1 Imagename
+#
+function is_image_available {
+
     desc_files=$(find /var/cache/linuxmuster/client-servertools/ -name 'description.txt')
 
-    if [ "x$1" == "x" ]; then  
-        echo 
-        echo "Imagename                 Info"
-        echo "-----------------------------------------------"
-        for desc in $desc_files; do
-            name=$(grep ^Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
-            info=$(grep ^Info: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
-            echo "$name                          $info"
-        done
-        echo "-----------------------------------------------"
-        echo 
-    else 
-        for desc in $desc_files; do
-            name=$(grep ^Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
-            if [ "$1" == "$name" ]; then 
-                return 0
-            fi
-        done
-        return 1
-    fi
+    for desc in $desc_files; do
+        name=$(grep ^Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+        if [ "$1" == "$name" ]; then 
+            return 0
+        fi
+    done
+    return 1
+}
+    
+# 
+# Listet die aktuell verfügbaren Online-Images auf
+# 
+function list_available_images {
+    desc_files=$(find /var/cache/linuxmuster/client-servertools/ -name 'description.txt')
+    echo 
+    echo -e "Imagename\tInfo"
+    echo "-----------------------------------------------"
+    for desc in $desc_files; do
+        name=$(grep ^Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+        info=$(grep ^Info: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+        echo -e "$name\t$info"
+    done
+    echo "-----------------------------------------------"
+    echo 
 }
 
 #
@@ -215,7 +217,7 @@ function check_target_fileset {
     fi
 }
 
-#nnnnnnn
+#
 # Hole die Cloop-Dateien vom cloop-Server
 # @Argumente
 # $1  Hardwareklasse

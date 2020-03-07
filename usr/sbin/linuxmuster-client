@@ -62,7 +62,8 @@ auto)
     fi 
     # Hardwareklasse wird CLOOP_NAME verwendet, außer es wurde gesetzt
     HOSTGROUP=${HOSTGROUP:-$CLOOP_NAME}
-    list_available_images $CLOOP_NAME || { list_available_images; exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."; }
+    get_available_images
+    is_image_available $CLOOP_NAME || { list_available_images; exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."; }
 
     #PATCHCLASS_SET=1
     #PATCHCLASS=$HOSTGROUP
@@ -79,7 +80,8 @@ get-cloop)
     fi 
     # Hardwareklasse wird CLOOP_NAME verwendet, außer es wurde gesetzt
     HOSTGROUP=${HOSTGROUP:-$CLOOP_NAME}
-    list_available_images $CLOOP_NAME || { list_available_images; exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."; }
+    get_available_images
+    is_image_available $CLOOP_NAME || { list_available_images; exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."; }
     get_remote_cloop $HOSTGROUP $CLOOP_NAME
     ;;
 configure)
@@ -101,6 +103,7 @@ set-postsync-pass)
     set_password_to_postsync $PATCHCLASS
     ;;
 list-available)
+    get_available_images
     list_available_images
     ;;
 *)
