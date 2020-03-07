@@ -1,3 +1,23 @@
+linuxmuster-client-servertools (0.9a) trump; urgency=medium
+
+  [ Tobias Küchel ]
+  * Added consolidate -H (remove -h)
+  * Added wget -c to continue downloads
+  * Added -f to force overwrite files
+  * Renamed the option -l to -p for password
+  * Hiding the option to set the password alone
+  * Added checking of the md5sums
+  * Removed update-available, unnecessary as command
+  * Rename variable HWCLASS to HOSTGROUP consistently
+  * Renamed exit1 to exit_error consistently
+  * Changed the copying of all ssh-keys to the client
+  * Changed the default password to "muster" analogous to the XEN-VMs
+  * Changed the encoding to utf-8
+  * changed linuxmuster-mcpfd behavior
+  * Added separate is_available function
+
+ -- Tobias Küchel <tobias@linuxmuster.net>  Sat, 07 Mar 2020 17:37:35 +0100
+
 linuxmuster-client-servertools (0.9) babo; urgency=low
 
   [ Frank Schiebel ]
@@ -6,18 +26,6 @@ linuxmuster-client-servertools (0.9) babo; urgency=low
   [ Tobias Küchel ]
   * added pull requests from v6 here as well
   * fix package dependency for linbo7
-  * Added consolidate -H (remove -h)
-  * Added wget -c to continue downloads
-  * Added -f to force overwrite files
-  * Renamed the option -l to -p for password
-  * Hiding the option to set the password alone
-  * Added checking of the md5sums 
-  * Removed update-available, unnecessary as command
-  * Rename variable HWCLASS to HOSTGROUP consistently
-  * Renamed exit1 to exit_error consistently
-  * Changed the copying of all ssh-keys to the client
-  * Changed the default password to "muster" analogous to the XEN-VMs
-  * Changed the encoding to utf-8
 
  -- Frank Schiebel <frank@linuxmuster.net>  Sun, 17 Nov 2019 08:25:57 +0100
 
