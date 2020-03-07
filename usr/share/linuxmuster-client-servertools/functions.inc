@@ -113,11 +113,11 @@ function check_startup {
 # Aktualisiert die Liste der aktuell verfügbaren Online-Image
 # 
 function get_available_images {
-    if [ -d /var/cache/linuxmuster-client-servertools/ ]; then 
-        rm -rf /var/cache/linuxmuster-client-servertools/
+    if [ -d /var/cache/linuxmuster/client-servertools/ ]; then 
+        rm -rf /var/cache/linuxmuster/client-servertools/*
     fi
     echo  -n "Hole Liste der verfügbaren cloops..."
-    wget --mirror -A.txt -np -P /var/cache/linuxmuster-client-servertools http://cloop.linuxmuster.net/meta/ > /dev/null 2>&1 && colorecho "green" "OK"
+    wget --mirror -A.txt -np -P /var/cache/linuxmuster/client-servertools $CONF_CLOOP_SERVER > /dev/null 2>&1 && colorecho "green" "OK"
 }
 
 # 
@@ -130,7 +130,7 @@ function get_available_images {
 function list_available_images {
     get_available_images
     
-    desc_files=$(find /var/cache/linuxmuster-client-servertools/ -name 'description.txt')
+    desc_files=$(find /var/cache/linuxmuster/client-servertools/ -name 'description.txt')
 
     if [ "x$1" == "x" ]; then  
         echo 
