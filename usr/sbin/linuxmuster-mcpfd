@@ -1,52 +1,50 @@
 #!/bin/bash
 
-STARTCONF=$1
+# Konfiguration lesen
+. /etc/linuxmuster/client-servertools.conf || exit 1
+# Funtionen einbinden
+. /usr/share/linuxmuster-client-servertools/functions.inc || exit 1
+
+cd $CONF_LINBODIR
+
+STARTCONF=$(basename $1)
 TARGETNAME=$2
 TEMPDIR=$(mktemp -d -p .)
-#TEMPDIR=/tmp/tmp.eXgIKvgX7s
 
 if [ "x$STARTCONF" == "x" ]; then 
-    echo "[ERROR] The start conf "
-    exit 1
+    rm -rf $TEMPDIR
+    exit_error "[ERROR] The start conf "
 fi
-
 if [ "x$TARGETNAME" == "x" ]; then 
-    echo "[ERROR] A target name for the package has to be given."
-    exit 1
+    rm -rf $TEMPDIR
+    exit_error "[ERROR] A target name for the package has to be given."
 fi
-
-
 if [ ! -f $STARTCONF ]; then
-    echo "[ERROR] Cannot open $STARTCONF"
-    exit 1
+    rm -rf $TEMPDIR
+    exit_error "[ERROR] Cannot open $STARTCONF"
 fi
-
 
 NUMOS=$(grep "\[OS\]" $STARTCONF | wc -l)
-
 if [ $NUMOS -gt 1 ]; then 
-
-echo "[ERROR] $NUMOS OS definitions found in $STARTCONF" 
+    rm -rf $TEMPDIR
     cat <<MESSAGE
  Only a configuration with exactly one OS definition can be used to create
  a cloop package. Please change your start.conf accordingly.
 MESSAGE
-    exit 1
+    exit_error "[ERROR] $NUMOS OS definitions found in $STARTCONF" 
 fi
 
-CLOOP=$(grep ^BaseImage $STARTCONF | awk -F"=" '{print $2}' | xargs)
-IMAGE=$(grep ^Image $STARTCONF  | awk -F"=" '{print $2}' | xargs)
+CLOOP=$(grep ^BaseImage $STARTCONF | awk -F"=" '{print $2}' | sed 's/#.*//' | xargs)
+IMAGE=$(grep ^Image $STARTCONF  | awk -F"=" '{print $2}' | sed 's/#.*//' | xargs)
 POSTSYNC=${CLOOP}.postsync
 
 if [ "x$IMAGE" != "x" ]; then
-    echo "[ERROR] There is an rsync image in your config."
-    exit 1
+    rm -rf $TEMPDIR
+    exit_error "[ERROR] There is an rsync image in your config."
 fi
-
-
 if [ ! -f $POSTSYNC ]; then
-    echo "[ERROR] Cannot open $POSTSYNC"
-    exit 1
+    rm -rf $TEMPDIR
+    exit_error "[ERROR] Cannot open $POSTSYNC"
 fi
 
 PATCHCLASS=$(grep ^PATCHCLASS $POSTSYNC | awk -F"=" '{print $2}' | sed -e 's/"//g' )
@@ -94,15 +92,11 @@ echo
 echo "To publish this cloop to the comminuty, provide"
 echo "the files:"
 echo
-echo "  $TARGETNAME.clpkg.tar"
-echo "  $TARGETNAME.clpkg.meta"
+echo "  $CONF_LINBODIR/$TARGETNAME.clpkg.tar"
+echo "  $CONF_LINBODIR/$TARGETNAME.clpkg.meta"
 echo
 echo "to a maintainer who has write access to the"
 echo "download server."
-
-
-
-
 
 
 exit 0
