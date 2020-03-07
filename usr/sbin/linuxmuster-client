@@ -12,7 +12,7 @@
 # Funtionen einbinden
 . /usr/share/linuxmuster-client-servertools/functions.inc || exit 1
 # Netzwerkparameter linuxmuster.net
-. /var/lib/linuxmuster/network.settings || exit 1
+#. /var/lib/linuxmuster/network.settings || exit 1
 
 # deklaration der globalen arrays
 declare -A TARGET_FILESET
