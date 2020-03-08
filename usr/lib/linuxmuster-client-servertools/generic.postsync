@@ -1,14 +1,14 @@
 echo "##### POSTSYNC BEGIN #####" 
-LOG=/mnt/var/log/postsync.log
+export LOG=/mnt/var/log/postsync.log
 echo "##### POSTSYNC BEGIN #####" >  $LOG
-NOW=$(date +%Y%m%d-%H%M)
+export NOW=$(date +%Y%m%d-%H%M)
 echo $NOW | tee -a $LOG
 
 # IP-Adresse des Servers
-SERVERIP=$(nslookup dummy 2> /dev/null | head -n 1 | awk -F: '{print $2}' | sed "s/\s*//g")
+export SERVERIP=$(nslookup dummy 2> /dev/null | head -n 1 | awk -F: '{print $2}' | sed "s/\s*//g")
 
 # Die Hostgruppe des aktuellen Rechners
-HOSTGROUP=$(hostgroup) 
+export HOSTGROUP=$(hostgroup) 
 
 # Raum feststellen. Dieses Skript geht davon aus
 # dass die Rechner Namen der Form
@@ -18,6 +18,7 @@ RAUM=${HOSTNAME%%-*}
 if [ "x${RAUM}" == "x" ]; then 
     RAUM="unknown"
 fi
+export RAUM
 
 # UVZ für die Patches auf dem Server. Mit dieser Variablen 
 # kann man verschiedene Patches, z.B. für unterschiedliche
@@ -26,11 +27,11 @@ fi
 # ein eigenes Patchklassenverzeichnis auf dem Server.
 # Damit kann man verschiedene Patchklassen mit derselben cloop-Datei
 # bedienen, wenn man das benötigt.
-PATCHCLASS="gruppe1"
+export PATCHCLASS="DUMMYPATCHCLASS"
 
 # Das Verzeichnis, in dem die Serverpatches
 # im lokalen Clientcache synchronisiert werden.
-PATCHCACHE=/linuxmuster-client/serverpatches
+export PATCHCACHE=/linuxmuster-client/serverpatches
 
 echo "" | tee -a $LOG
 echo "Hostname:      ${HOSTNAME}" | tee -a $LOG
