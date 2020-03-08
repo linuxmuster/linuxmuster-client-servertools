@@ -9,6 +9,7 @@
 
 ts=$(date +%Y%m%d-%H%M%S)
 CACHE=/var/cache/linuxmuster/client-servertools
+TEMPLATEDIR=/usr/lib/linuxmuster-client-servertools
 
 #
 # Farbige Ausgabe
@@ -274,6 +275,12 @@ function set_password_to_postsync {
 function configure_cloop {
 
     CLOOP_NAME=${2%.cloop}
+    # Patchklasse = hostgroup
+    HOSTGROUP=${1}
+    echo "HW-Klasse: $HOSTGROUP"
+    PATCHCLASS=$HOSTGROUP
+    echo "INFO: Patchklasse ist $PATCHCLASS"
+    STARTCONF=$CONF_LINBODIR/start.conf.$HOSTGROUP
     # Gibt es das Cloop?
     if [ ! -e $CONF_LINBODIR/${CLOOP_NAME}.cloop ]; then 
         echo "Cloop Datei nicht gefunden: $CONF_LINBODIR/${CLOOP_NAME}.cloop"
@@ -281,14 +288,13 @@ function configure_cloop {
     fi
     echo "INFO: Cloop-Datei ist $CONF_LINBODIR/${CLOOP_NAME}.cloop"
 
-    HOSTGROUP=${1}
-    STARTCONF=$CONF_LINBODIR/start.conf.$HOSTGROUP
+    # start.conf sichern
     if [ ! -e $STARTCONF ]; then 
         echo "WARNING: Keine start.conf für $HOSTGROUP gefunden"
 	exit_error "Failed. Aborting."
     fi
     if [ -f $STARTCONF ]; then
-        echo "INFO: Sichere $STARTCONF nach $STARTCONF ${STARTCONF}.$ts.autobackup"
+        echo "INFO: Sichere $STARTCONF nach ${STARTCONF}.$ts.autobackup"
         cp $STARTCONF ${STARTCONF}.$ts.autobackup
     fi
 
@@ -304,31 +310,110 @@ function configure_cloop {
         sed -i "s/\(DownloadType\s*\=\s*\) \(.*\)/\1 rsync/" $STARTCONF
     fi
 
-    echo "INFO: Erstelle postsync aus Vorlage"
-    # postsync aus vorlage holen
+    # postsync evtl. aus vorlage holen
+    echo "INFO: Erstelle postsync aus Vorlage mit korrekter Patchklasse"
     POSTSYNC=$CONF_LINBODIR/${CLOOP_NAME}.cloop.postsync
+    if [ -f $POSTSYNC ]; then
+	if diff $POSTSYNC $CONF_GENERIC_POSTSYNC >/dev/null; then
+	    echo "WARNING: Sichere $POSTSYNC nach ${POSTSYNC}.$ts.autobackup"
+            mv $POSTSYNC ${POSTSYNC}.$ts.autobackup
+	fi
+    fi
     cp $CONF_GENERIC_POSTSYNC/generic.postsync $POSTSYNC
-
-    # Patchklasse = hostgroup
-    PATCHCLASS=$HOSTGROUP
-    echo "INFO: Patchklasse ist $PATCHCLASS"
-
-    echo "INFO: Kopiere generische postsync.d-Dateien und passe sie an"
-    mkdir -p ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/
-    cp -ar $CONF_GENERIC_POSTSYNC/generic.postsync.d/* ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d/
     sed -i "s/\(PATCHCLASS\s*\=\s*\)\(.*\)/\1\"$PATCHCLASS\"/" $POSTSYNC
 
+    # postsync.d-files evtl aus Vorlage holen
+    echo "INFO: Kopiere generische postsync.d-Dateien und passe sie an"
+    mkdir -p ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/
+    for SRC in $CONF_GENERIC_POSTSYNC/generic.postsync.d/*[^~]; do
+	TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d/$(basename $SRC)
+	if [ -f $TARGET ]; then
+	    if diff $TARGET $SRC > /dev/null; then
+		echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
+		mv $TARGET $TARGET.$ts.autobackup~
+	    fi
+	fi
+	cp -ar $SRC $TARGET
+    done
+
+    ## etc/hosts
+    echo " Copying /etc/hosts from template"
+    TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/hosts
+    SRC=$TEMPLATEDIR/etc_hosts
+    mkdir -p $(dirname $TARGET)
+    if [ -f $TARGET ]; then
+	if diff $TARGET $SRC > /dev/null; then
+	    echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
+	    mv $TARGET $TARGET.$ts.autobackup~
+	fi
+    fi
+    cp -ar $SRC $TARGET
+    echo "  - configuring for this installation"
+    sed -i "s/DOMAINNAME/$domainname/g" $TARGET
+    sed -i "s/\#SERVERIP/$serverip/g" $TARGET
+
+
+    ## etc/ssh/sshd_config
+    echo " Copying common/etc/ssh/sshd_config from /etc/ssh/sshd_config, adding AllowUsers"
+    TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/ssh/sshd_config
+    SRC=/etc/ssh/sshd_config
+    mkdir -p $(dirname $TARGET)
+    if [ -f $TARGET ]; then
+	if diff $TARGET $SRC > /dev/null; then
+	    echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
+	    mv $TARGET $TARGET.$ts.autobackup~
+	fi
+    fi
+    cp -ar $SRC $TARGET
+    echo "  - patching sshd_config for to allow login from root@$serverip"
+    if grep ^# /mnt/etc/ssh/sshd_config  | grep AllowUsers >/dev/null ; then
+	echo "  + AllowUsers not in file: adding it"
+	echo "AllowUsers root@$serverip linuxadmin@serverip" >> $TARGET
+    else
+	sed -i "s/\(AllowUsers \)\(.*\)/\1 root@$serverip linuxadmin@$serverip/" $TARGET
+    fi
+
+    ## etc/fstab
+    echo " Copying /etc/fstab from template"
+    TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/fstab
+    SRC=$TEMPLATEDIR/etc_fstab
+    mkdir -p $(dirname $TARGET)
+    if [ -f $TARGET ]; then
+	if diff $TARGET $SRC > /dev/null; then
+	    echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
+	    mv $TARGET $TARGET.$ts.autobackup~
+	fi
+    fi
+    cp -ar $SRC $TARGET
+
+    ## etc/systemd/timesyncd.conf
+    echo " Copying /etc/systemd/timesyncd.conf from template"
+    TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/systemd/timesyncd.conf
+    SRC=$TEMPLATEDIR/etc_systemd_timesyncd.conf
+    mkdir -p $(dirname $TARGET)
+    if [ -f $TARGET ]; then
+	if diff $TARGET $SRC > /dev/null; then
+	    echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
+	    mv $TARGET $TARGET.$ts.autobackup~
+	fi
+    fi
+    cp -ar $SRC $TARGET
+    echo "  - configuring for this installation"
+    sed -i "s/\#SERVERIP/$serverip/g" $TARGET
+
     # Netzwerksettings in den postsync-pfad
+    echo "INFO: Creating /etc/linuxmuster-client/server.network.settings in the clients filesystem"
     mkdir -p ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/
     echo >  ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
     for i in servername serverip basedn sambadomain domainname ; do
 	grep -e $i /var/lib/linuxmuster/setup.ini | sed "s/\ //g" >> ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
     done
-    #cp  /var/lib/linuxmuster/network.settings ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
-    
+    #v6: cp  /var/lib/linuxmuster/network.settings ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
+
     # Passworthash in den postsync-Baum schreiben
+    echo "INFO: Setze Passwort für linuxadmin & co."
     set_password_to_postsync $PATCHCLASS
- 
+
     # public-key des Server-roots in die authorized keys der client roots
     echo "INFO: Kopiere root-public-keys in den postsync-Baum nach /root/.ssh/authorized_keys"
     mkdir -p  ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/root/.ssh

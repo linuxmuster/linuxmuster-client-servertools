@@ -105,12 +105,8 @@ if [ -f $TARGETNAME.clpkg.tar.bz2  -o -f $TARGETNAME.clpkg.meta ]; then
     fi
 fi
 
-
-
 ## get Patchclass
 PATCHCLASS=$(grep ^PATCHCLASS $POSTSYNC | awk -F"=" '{print $2}' | sed -e 's/"//g' )
-FilesToPack="${CLOOP} ${CLOOP}.info ${CLOOP}.desc"
-DirToPack="$CONF_LINBODIR/linuxmuster-client/$PATCHCLASS"
 TarFile=${TARGETNAME}.tar
 HWCLASS=$(echo $STARTCONF | sed -e "s/start\.conf\.//")
 STARTCONF_NEW=$(echo $STARTCONF | sed -e "s/$HWCLASS/$TARGETNAME/g")
@@ -152,6 +148,10 @@ cp ${CLOOP}.desc $TEMPDIR/${CLOOP_NEW}.desc
 mkdir -p $TEMPDIR/linuxmuster-client/$TARGETNAME
 echo " Adding patchfiles to package"
 cp -r linuxmuster-client/$PATCHCLASS/* $TEMPDIR/linuxmuster-client/$TARGETNAME/
+## authorized_keys
+echo " Emptying linuxmuster-client/$TARGETNAME/common/root/.ssh/authorized_keys"
+mkdir -p $TEMPDIR/linuxmuster-client/$TARGETNAME/common/root/.ssh/
+echo > $TEMPDIR/linuxmuster-client/$$TARGETNAME/common/root/.ssh/authorized_keys
 
 echo " Create tar-package"
 cd $TEMPDIR
