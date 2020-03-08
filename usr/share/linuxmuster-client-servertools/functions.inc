@@ -5,9 +5,10 @@
 # GPL V3
 # Frank Schiebel <frank@linuxmuster.net>
 # Jesko Anschuetz <jesko|linuxmuster.net>
+# Tobias Küchel <tobias|linuxmuster.net>
 
 ts=$(date +%Y%m%d-%H%M%S)
-
+CACHE=/var/cache/linuxmuster/client-servertools
 
 #
 # Farbige Ausgabe
@@ -49,48 +50,6 @@ function exit_error {
 }
 
 
-# 
-# Gibt einen Hilfetext aus
-#
-function print_help() {
-cat <<End-of-help
-Anwendung:
-    $0 -a list-available
-        Aktualisiert die Liste aller verfügbaren cloops und zeigt sie an.
-
-    $0 -a auto -c <Imagename> [-H <hardware-class>] [-p <password>]
-        Automatischer Modus, versucht das cloop aus dem Netz vollautomatisch zu installieren
-        <Imagename> muss einer der verfügbaren Cloops sein. Hardwareklasse und Passwort sind optional.
-
-    $0 -a get-cloop -c <Imagename> [-H <hardware-class>]
-        Holt ein cloop aus dem Netz und speichert die nötigen dateien in ${CONF_LINBODIR} ab.
-        Ist die Hardwareklasse nicht angegeben wird eine Datei start.conf.<Imagename> erstellt.
-
-    $0 -a configure -c <Imagename> [-H <hardware-class>] [-p <password>]
-        Bereitet ein heruntergeladenes cloop-Dateiset mit einem passenden postsync 
-        Skript zur Synchronisation auf Clients vor. Setzt das Passwort des Benutzers linuxadmin 
-	in der Hardwareklasse auf das mit -p angegebene Passwort, andernfalls auf den Wert in der 
-        Konfigurationsdatei.
-          
-Optionen:
-    -f                   überschreibe alle Dateien und fahre mit dem Download fort, autobackup start.conf
-    -c <Imagename>      welches cloop aus dem Netz verwendet wird
-    -H <hardware-class>  für welche Hardwareklasse das cloop heruntergeladen und konfiguriert wird
-    -p <password>        Ermöglicht es, das Passwort einer Hardwareklasse manuell zu setzen. 
-
-    Beispiel:
-
-     $0 -a auto -H myxenial -c xenial916
-    
-     Holt das Image "xenial916" vom linuxmuster-Server und legt anschließend eine HW-Klasse "myxenial" an, 
-     die das Image verwendet. Die Postsync-Einstellungen und Skripte werden im Verzeichnis
-        ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/myxenial/
-     angelegt. 
-     Das Passwort für linuxadmin wird bei der Synchronisation auf den in der Konfigurationsdatei 
-     vorgegebenen Wert gesetzt.
-
-End-of-help
-}
 
 
 #
@@ -117,8 +76,7 @@ function get_available_images {
     #    rm -rf /var/cache/linuxmuster/client-servertools/*
     #fi
     echo  -n "Hole Liste der verfügbaren cloops..."
-    wget --mirror -A.txt -np -P /var/cache/linuxmuster/client-servertools $CONF_CLOOP_SERVER > /dev/null 2>&1 && colorecho "green" "OK"
-    
+    wget --mirror -A.meta -np -P $CACHE $CONF_CLOOP_SERVER > /dev/null 2>&1 && colorecho "green" "OK"
 }
 
 #
@@ -128,10 +86,10 @@ function get_available_images {
 #
 function is_image_available {
 
-    desc_files=$(find /var/cache/linuxmuster/client-servertools/ -name 'description.txt')
+    desc_files=$(find $CACHE/ -name '*.meta')
 
     for desc in $desc_files; do
-        name=$(grep ^Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+        name=$(grep ^#Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
         if [ "$1" == "$name" ]; then 
             return 0
         fi
@@ -143,13 +101,13 @@ function is_image_available {
 # Listet die aktuell verfügbaren Online-Images auf
 # 
 function list_available_images {
-    desc_files=$(find /var/cache/linuxmuster/client-servertools/ -name 'description.txt')
+    desc_files=$(find $CACHE/ -name '*.meta')
     echo 
     echo -e "Imagename\tInfo"
     echo "-----------------------------------------------"
     for desc in $desc_files; do
-        name=$(grep ^Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
-        info=$(grep ^Info: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+        name=$(grep ^#Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+        info=$(grep ^#Info: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
         echo -e "$name\t$info"
     done
     echo "-----------------------------------------------"
@@ -167,12 +125,10 @@ function list_available_images {
 function get_target_fileset {
     TARGET_FILESET["startconf"]=${CONF_LINBODIR}/start.conf.$1 
     TARGET_FILESET["cloop"]=${CONF_LINBODIR}/$2.cloop 
-    for key in postsync desc macct; do 
+    for key in desc info; do 
         TARGET_FILESET["$key"]=${CONF_LINBODIR}/$2.cloop.$key 
     done
-    for key in md5sums md5sig; do 
-        TARGET_FILESET["$key"]=${CONF_LINBODIR}/$2_hashes.$key 
-    done
+    TARGET_FILESET["client-dir"]=${CONF_LINBODIR}/linuxmuster-client/$1/
 }
 
 #
@@ -185,11 +141,10 @@ function get_target_fileset {
 function get_source_fileset {
     SOURCE_FILESET["startconf"]=start.conf.$1 
     SOURCE_FILESET["cloop"]=$1.cloop 
-    SOURCE_FILESET["md5sums"]=md5sums 
-    SOURCE_FILESET["md5sig"]=md5sums.sig 
-    for key in desc macct; do 
+    for key in desc info; do 
         SOURCE_FILESET["$key"]=$1.cloop.$key 
     done
+    SOURCE_FILESET["client-dir"]=linuxmuster-client/$1/
 }
 
 
@@ -202,9 +157,9 @@ function get_source_fileset {
 #
 function check_target_fileset {
     stop="0";
-    for key in startconf cloop desc macct md5sums md5sig; do 
+    for key in startconf cloop desc info client-dir; do 
         if [ -e ${TARGET_FILESET["$key"]} ]; then 
-            echo "Die Datei ${TARGET_FILESET["$key"]}  existiert bereits."
+            echo "Die Datei ${TARGET_FILESET["$key"]}  existiert bereits. (Wird mit -f überschrieben)"
             stop="1"
         fi
     done
@@ -218,60 +173,78 @@ function check_target_fileset {
 }
 
 #
-# Hole die Cloop-Dateien vom cloop-Server
+# Hole alle Daten Download-Server
 # @Argumente
-# $1  Hardwareklasse
-# $2 Remote Cloop Name
+# $1 Hardwareklasse
+# $2 Remote Hardwareklasse
 #
 function get_remote_cloop {
-    cloop_name=${2%.cloop}
-    get_target_fileset $1 $cloop_name
-    get_source_fileset $cloop_name
-    check_target_fileset
 
+    hwclass=${2}
+    cd ${CACHE}/${hwclass}/
+
+    echo -n "Hole ${hwclass}.clpkg.tar.bz2 von ${CONF_CLOOP_SERVER}: "
+    if wget -c ${CONF_CLOOP_SERVER}/$hwclass/${hwclass}.clpkg.tar.bz2; then
+	colorecho "green" "Success."
+    else
+        colorecho "red" "Failed"
+    fi
+
+    echo -n "Überprüfe Integrität: "
+    if md5sum -c ${hwclass}.clpkg.meta --status ; then
+	colorecho "green" "Success."
+    else
+        colorecho "red" "Failed"
+    fi
+
+    echo -n "Entpacke: "
+    if tar -xjf ${hwclass}.clpkg.tar.bz2; then
+	colorecho "green" "Success."
+    else
+        colorecho "red" "Failed"
+    fi
+
+    get_target_fileset $1 $hwclass
+    get_source_fileset $hwclass
+    echo -n "Überprüfe bereits vorhandene Dateien: "
+    if check_target_fileset ; then
+	colorecho "green" "Success."
+    else
+	colorecho "red" "Failed."
+    fi
+
+    ## backup für die start.conf wird automatisch gemacht
     STARTCONF=${TARGET_FILESET["startconf"]};
     if [ -f $STARTCONF ]; then
-        echo "INFO: Sichere $STARTCONF nach $STARTCONF ${STARTCONF}.$ts.autobackup"
+        echo "INFO: Sichere $STARTCONF nach ${STARTCONF}.$ts.autobackup"
         cp $STARTCONF ${STARTCONF}.$ts.autobackup
     fi
 
-    for key in startconf cloop desc macct md5sums md5sig; do 
-        echo "Hole ${TARGET_FILESET[$key]} von"
-        echo "     ${CONF_CLOOP_SERVER}/cloops/$cloop_name/${SOURCE_FILESET[$key]}"
-        if wget -c ${CONF_CLOOP_SERVER}/cloops/$cloop_name/${SOURCE_FILESET[$key]} -O ${TARGET_FILESET[$key]}; then 
+    for key in startconf cloop desc info client-dir; do 
+        echo -n "Kopiere ${SOURCE_FILESET[$key]} nach ${TARGET_FILESET[$key]}: "
+        if rsync -a --delete ${SOURCE_FILESET[$key]} ${TARGET_FILESET[$key]} ; then 
             colorecho "green" "Success."
         else 
             colorecho "red" "Failed"
-            #rm -f ${TARGET_FILESET[$key]}
         fi
     done
-    echo "INFO: Überprüfe download"
-    md5sum -c ${TARGET_FILESET["md5sums"]} --status
-    if [ $? -eq 0 ]; then
- 	colorecho "green" "Success."
-    else
-	colorecho "red" "Failed"
-	md5sum -c ${TARGET_FILESET["md5sums"]} 
-	exit_error "Lösche die entsprechenden Dateien und versuche es erneut."
-    fi
+    
 }
 
 #
 # Sets password hash to postsync file
 # $1 Name der Patchklasse
+# $2 LAPASS
 #
 function set_password_to_postsync {
-    #if [ x$1 == "x" ]; then 
-    #    echo "ERROR: Zum setzen eines neuen Passworts muss die Patchklasse angegeben werden"
-    #    exit 1
-    #fi
+
     if [ ! -d ${CONF_LINBODIR}/linuxmuster-client/$1/common/ ]; then 
         echo "ERROR: Das Verzeichnis ${CONF_LINBODIR}/linuxmuster-client/$1/common/ existiert nicht."
         echo "ERROR: Die Hardwareklasse $1 gibt es nicht?!"
 	exit_error "Failed. Aborting."
     fi
 
-    if [ x$LAPASS == "x" ]; then 
+    if [ "x$LAPASS" == "x" ]; then 
         # postsync konfiguration anpassen
         # linuxadmin-Passworthash aus der Konfiguration bestimmen und für das postsync Skript bereitstellen
 	echo "INFO: Setze Passwort auf Konfigurationswert"
@@ -291,13 +264,13 @@ function set_password_to_postsync {
 # $2  Name der cloop-Datei, die eingerichtet werden soll
 #
 function configure_cloop {
+
     CLOOP_NAME=${2%.cloop}
     # Gibt es das Cloop?
     if [ ! -e $CONF_LINBODIR/${CLOOP_NAME}.cloop ]; then 
         echo "Cloop Datei nicht gefunden: $CONF_LINBODIR/${CLOOP_NAME}.cloop"
 	exit_error "Failed. Aborting."
     fi
-
     echo "INFO: Cloop-Datei ist $CONF_LINBODIR/${CLOOP_NAME}.cloop"
 
     HOSTGROUP=${1}
@@ -323,7 +296,6 @@ function configure_cloop {
         sed -i "s/\(DownloadType\s*\=\s*\) \(.*\)/\1 rsync/" $STARTCONF
     fi
 
-
     echo "INFO: Erstelle postsync aus Vorlage"
     # postsync aus vorlage holen
     POSTSYNC=$CONF_LINBODIR/${CLOOP_NAME}.cloop.postsync
@@ -341,12 +313,12 @@ function configure_cloop {
 
     # Gibt es das Patchklassenverzeichnise schon?
     # Wenn ja: Sichern!
-    if [ -d ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ]; then 
-        echo "WARN: Sichere das vorhandene Patchklassenverzeichnis"
-        echo "      ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS  nach"
-        echo "      ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup"
-        mv ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup
-    fi
+    #if [ -d ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ]; then 
+    #    echo "WARN: Sichere das vorhandene Patchklassenverzeichnis"
+    #    echo "      ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS  nach"
+    #    echo "      ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup"
+    #    mv ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup
+    #fi
 
     mkdir -p ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/
     cp -ar $CONF_GENERIC_POSTSYNC/generic.postsync.d ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d
