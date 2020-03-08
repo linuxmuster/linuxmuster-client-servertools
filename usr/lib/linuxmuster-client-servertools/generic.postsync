@@ -50,7 +50,7 @@ echo " - getting patchfiles" | tee -a $LOG
 # HOSTNAME -> Rechnername
 # Verzeichnis anlegen, damit es sicher existiert
 mkdir -p /cache/${PATCHCACHE}
-rsync --delete --progress -lr "${SERVERIP}::linbo/linuxmuster-client/${PATCHCLASS}" "/cache/${PATCHCACHE}" | tee -a $LOG
+rsync --delete --progress --exclude "- *~" -lr "${SERVERIP}::linbo/linuxmuster-client/${PATCHCLASS}" "/cache/${PATCHCACHE}" | tee -a $LOG
 
 echo " - patching local files"  | tee -a $LOG
 
@@ -58,8 +58,10 @@ echo " - patching local files"  | tee -a $LOG
 # files
 if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/common ]; then 
     echo "   - patching common to /mnt" | tee -a $LOG
-    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/common/* /mnt/ | tee -a $LOG
-    rsync --delete -lr /cache/${PATCHCACHE}/${PATCHCLASS}/common/postsync.d/ /mnt/postsync.d/ | tee -a $LOG
+      ## copy all files in common/*
+      cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/common/* /mnt/ | tee -a $LOG
+      ## rsync (with delete) all postsync.d-files
+      rsync --delete -lr /cache/${PATCHCACHE}/${PATCHCLASS}/common/postsync.d/ /mnt/postsync.d/ | tee -a $LOG
 fi
 
 # tarpacks
@@ -105,7 +107,7 @@ fi
 
 # Hook, um eigene Skripte auszuführen
 if [ -d /mnt/postsync.d ]; then
-    for SCRIPT in /mnt/postsync.d/*
+    for SCRIPT in /mnt/postsync.d/*[^~]
     do
         chmod 755 $SCRIPT
         echo "Executing: $SCRIPT" | tee -a $LOG
