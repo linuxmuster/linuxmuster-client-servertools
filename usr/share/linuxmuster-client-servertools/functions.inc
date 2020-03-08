@@ -10,6 +10,7 @@
 ts=$(date +%Y%m%d-%H%M%S)
 CACHE=/var/cache/linuxmuster/client-servertools
 TEMPLATEDIR=/usr/lib/linuxmuster-client-servertools
+SHAREDIR=/usr/share/linuxmuster-client-servertools/examples/
 
 #
 # Farbige Ausgabe
@@ -418,6 +419,10 @@ function configure_cloop {
     echo "INFO: Kopiere root-public-keys in den postsync-Baum nach /root/.ssh/authorized_keys"
     mkdir -p  ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/root/.ssh
     cat /root/.ssh/id_*.pub > ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/root/.ssh/authorized_keys
+
+    ## cp example file
+    echo "INFO: Kopiere Beispiel-Datei für ein postsync.d-file nach ${CONF_POSTSYNCDIR}/PATCHCLASS/common/postsync.d"
+    cp $SHAREDIR/10-local-example-fix-cups-client ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d
     
     colorecho "green" "Success"
 }
