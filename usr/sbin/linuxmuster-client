@@ -144,7 +144,7 @@ case $ACTION in
 	#	PATCHCLASS=""
 	#fi
 	PATCHCLASS=$HOSTGROUP
-	set_password_to_postsync $PATCHCLASS $LAPASS
+	set_password_to_postsync $PATCHCLASS
 	;;
     list-available)
 	get_available_images

@@ -128,7 +128,7 @@ function get_target_fileset {
     for key in desc info; do 
         TARGET_FILESET["$key"]=${CONF_LINBODIR}/$2.cloop.$key 
     done
-    TARGET_FILESET["client-dir"]=${CONF_LINBODIR}/linuxmuster-client/$1/
+    TARGET_FILESET["client-dir"]=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$1/
 }
 
 #
@@ -144,7 +144,7 @@ function get_source_fileset {
     for key in desc info; do 
         SOURCE_FILESET["$key"]=$1.cloop.$key 
     done
-    SOURCE_FILESET["client-dir"]=linuxmuster-client/$1/
+    SOURCE_FILESET["client-dir"]=${CONF_POSTSYNCDIR}/$1/
 }
 
 
@@ -170,6 +170,7 @@ function check_target_fileset {
             exit 1
 	fi
     fi
+    return 0
 }
 
 #
@@ -219,6 +220,15 @@ function get_remote_cloop {
         echo "INFO: Sichere $STARTCONF nach ${STARTCONF}.$ts.autobackup"
         cp $STARTCONF ${STARTCONF}.$ts.autobackup
     fi
+    
+    ## backup für das Patchklassenverzeichnis
+    PATCHCLASS=$hwclass
+    if [ -d ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ]; then 
+        echo "INFO: Sichere das vorhandene Patchklassenverzeichnis"
+        echo "      ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS  nach"
+        echo "      ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup"
+        mv ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup
+    fi
 
     for key in startconf cloop desc info client-dir; do 
         echo -n "Kopiere ${SOURCE_FILESET[$key]} nach ${TARGET_FILESET[$key]}: "
@@ -234,26 +244,24 @@ function get_remote_cloop {
 #
 # Sets password hash to postsync file
 # $1 Name der Patchklasse
-# $2 LAPASS
 #
 function set_password_to_postsync {
 
-    if [ ! -d ${CONF_LINBODIR}/linuxmuster-client/$1/common/ ]; then 
-        echo "ERROR: Das Verzeichnis ${CONF_LINBODIR}/linuxmuster-client/$1/common/ existiert nicht."
+    if [ ! -d ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$1/common/ ]; then 
+        echo "ERROR: Das Verzeichnis ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$1/common/ existiert nicht."
         echo "ERROR: Die Hardwareklasse $1 gibt es nicht?!"
 	exit_error "Failed. Aborting."
     fi
-
     if [ "x$LAPASS" == "x" ]; then 
         # postsync konfiguration anpassen
         # linuxadmin-Passworthash aus der Konfiguration bestimmen und für das postsync Skript bereitstellen
 	echo "INFO: Setze Passwort auf Konfigurationswert"
         PWHASH=$(echo "$CONF_LINUXADMIN_PW" | makepasswd --clearfrom=- --crypt-md5 |awk '{ print $2 }')
-        echo "linuxadmin|$PWHASH" > ${CONF_LINBODIR}/linuxmuster-client/$1/common/passwords
+        echo "linuxadmin|$PWHASH" > ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$1/common/passwords
     else 
 	echo "INFO: Setze Passwort auf Kommandozeilenwert"
         PWHASH=$(echo "$LAPASS" | makepasswd --clearfrom=- --crypt-md5 |awk '{ print $2 }')
-        echo "linuxadmin|$PWHASH" > ${CONF_LINBODIR}/linuxmuster-client/$1/common/passwords
+        echo "linuxadmin|$PWHASH" > ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$1/common/passwords
     fi
 }
 
@@ -301,37 +309,27 @@ function configure_cloop {
     POSTSYNC=$CONF_LINBODIR/${CLOOP_NAME}.cloop.postsync
     cp $CONF_GENERIC_POSTSYNC/generic.postsync $POSTSYNC
 
-#    if [ $CONF_HOSTGROUP_AS_PATCHCLASS != 0 ]; then 
-#        # Patchklasse aus config und Kommandozeile wird überschrieben
-#        # wenn die Konfiguration die Hostgruppe als Patchklasse erzwingt
-#        echo "WARN: Konfiguration erzwingt Hardwareklasse als Patchklasse"
-#        PATCHCLASS=$HOSTGROUP
-#    fi
-
+    # Patchklasse = hostgroup
     PATCHCLASS=$HOSTGROUP
     echo "INFO: Patchklasse ist $PATCHCLASS"
 
-    # Gibt es das Patchklassenverzeichnise schon?
-    # Wenn ja: Sichern!
-    #if [ -d ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ]; then 
-    #    echo "WARN: Sichere das vorhandene Patchklassenverzeichnis"
-    #    echo "      ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS  nach"
-    #    echo "      ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup"
-    #    mv ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup
-    #fi
-
+    echo "INFO: Kopiere generische postsync.d-Dateien und passe sie an"
     mkdir -p ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/
-    cp -ar $CONF_GENERIC_POSTSYNC/generic.postsync.d ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d
+    cp -ar $CONF_GENERIC_POSTSYNC/generic.postsync.d/* ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d/
     sed -i "s/\(PATCHCLASS\s*\=\s*\)\(.*\)/\1\"$PATCHCLASS\"/" $POSTSYNC
 
     # Netzwerksettings in den postsync-pfad
     mkdir -p ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/
-    cp  /var/lib/linuxmuster/network.settings ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
+    echo >  ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
+    for i in servername serverip basedn sambadomain domainname ; do
+	grep -e $i /var/lib/linuxmuster/setup.ini >> ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
+    done
     
     # Passworthash in den postsync-Baum schreiben
     set_password_to_postsync $PATCHCLASS
  
     # public-key des Server-roots in die authorized keys der client roots
+    echo "INFO: Kopiere root-public-keys in den postsync-Baum nach /root/.ssh/authorized_keys"
     mkdir -p  ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/root/.ssh
     cat /root/.ssh/id_*.pub > ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/root/.ssh/authorized_keys
     
