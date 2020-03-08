@@ -118,9 +118,9 @@ fi
 echo "Information:"
 echo " Cloop name:     $CLOOP -> $CLOOP_NEW"
 echo " Hardware class: $HWCLASS -> $TARGETNAME"
-echo " Patchclass:     $PATCHCLASS -> $PATCHCLASS"
+echo " Patchclass:     $PATCHCLASS -> $TARGETNAME"
 echo " start.conf:     $STARTCONF -> $STARTCONF_NEW"
-echo " Dir that will be packaged: $DirToPack"
+echo " Dir that will be packaged: ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/"
 echo " Additional Information: $INFORMATION"
 echo -n " Do you want to continue (may take a while) [Y/n]"
 read info
@@ -151,7 +151,7 @@ cp -r linuxmuster-client/$PATCHCLASS/* $TEMPDIR/linuxmuster-client/$TARGETNAME/
 ## authorized_keys
 echo " Emptying linuxmuster-client/$TARGETNAME/common/root/.ssh/authorized_keys"
 mkdir -p $TEMPDIR/linuxmuster-client/$TARGETNAME/common/root/.ssh/
-echo > $TEMPDIR/linuxmuster-client/$$TARGETNAME/common/root/.ssh/authorized_keys
+echo > $TEMPDIR/linuxmuster-client/$TARGETNAME/common/root/.ssh/authorized_keys
 
 echo " Create tar-package"
 cd $TEMPDIR
@@ -162,18 +162,21 @@ md5sum $TARGETNAME.clpkg.tar.bz2 > $TARGETNAME.clpkg.meta
 echo " Add Name and information"
 echo "#Name: $TARGETNAME" >> $TARGETNAME.clpkg.meta
 echo "#Info: $INFORMATION" >> $TARGETNAME.clpkg.meta
+echo "#Version: " >> $TARGETNAME.clpkg.meta
+rm -rf $TEMPDIR
 
-##rm -rf $TEMPDIR
 echo "done."
-echo 
-echo "To publish this cloop to the comminuty, provide"
-echo "the files:"
 echo
-echo "  $CONF_LINBODIR/$TARGETNAME.clpkg.tar"
+echo "You might want to add some version information in the file ${CONF_LINBODIR}/$TARGETNAME.clpkg.meta."
+echo "Lines should begin with #"
+echo 
+echo "To publish this cloop to the comminuty, provide the files"
+echo
+echo "  $CONF_LINBODIR/$TARGETNAME.clpkg.tar.bz2"
 echo "  $CONF_LINBODIR/$TARGETNAME.clpkg.meta"
 echo
-echo "to a maintainer who has write access to the"
-echo "download server."
+echo "to a maintainer who has write access to the download server."
+
 
 
 exit 0
