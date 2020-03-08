@@ -1,1 +1,3 @@
 var/cache/linuxmuster/client-servertools
+usr/share/linuxmuster-client-servertools
+usr/lib/linuxmuster-client-servertools
