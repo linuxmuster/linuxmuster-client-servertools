@@ -1,4 +1,20 @@
 #!/bin/sh
 
 # real-world example: if the file /etc/cups/client.conf exists, it should be adapted to your installation (serverip)
+if [ -f /mnt/etc/cups/client.conf ]; then
+    echo -e " - fixing /etc/cups/client.conf: "
 
+    # Die network.settings vom Server muss auf dem Client zur Verfügung stehen
+    . /mnt/etc/linuxmuster-client/server.network.settings
+    sed -i "s/\#SERVERIP/$serverip/g" /mnt/etc/cups/client.conf
+
+    echo "done"
+fi
+
+echo "   - /etc/cups/printers.conf if it exists"
+[ -f /mnt/etc/cups/printers.conf ] && chmod 600 /mnt/etc/cups/printers.conf
+
+
+
+
+    
