@@ -1,13 +1,13 @@
 #!/bin/sh
 if [ -e /mnt/etc/fstab ]; then
-    echo " - fixing fstab"
+    echo -n " - fixing fstab: "
     ROOT=$(sed ':a;N;$!ba;s/\n/;UMBRUCH;/g' $STARTCONF | sed 's/ //g'|sed 's/\[Partition\]/\n/g' | grep -i 'fstype=ext4' | sed 's/;UMBRUCH;/\n/g' | grep -i 'dev=/' | cut -d'=' -f2 | head -c20 | cut -d"#" -f1)
-    echo "   root: $ROOT"
+    echo -n "root: $ROOT, "
     sed -i "s#\#dummyroot#$ROOT#g" /mnt/etc/fstab
     SWAP=$(sed ':a;N;$!ba;s/\n/;UMBRUCH;/g' $STARTCONF | sed 's/ //g'|sed 's/\[Partition\]/\n/g' | grep -i 'fstype=swap' | sed 's/;UMBRUCH;/\n/g' | grep -i 'dev=/' | cut -d'=' -f2 | head -c20 | cut -d"#" -f1)
-    echo "   swap: $SWAP"
+    echo -n "swap: $SWAP, "
         sed -i "s#\#dummyswap#$SWAP#g" /mnt/etc/fstab
 
-    echo "      - done"
+    echo "done"
 fi
 

@@ -1,11 +1,11 @@
 #!/bin/sh
 if [ -e /mnt/etc/hosts ]; then
-    echo " - fixing hosts"
+    echo -n " - fixing hosts"
 
     HOSTS=/mnt/etc/hosts
     sed -i "s/HOSTNAME/$HOSTNAME/g" ${HOSTS}
 
-    echo "      - done"
+    echo "done"
 fi
 
 # done in linuxmuster-client

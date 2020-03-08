@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# real-world example: if the file /etc/cups/client.conf exists, it should be adapted to your installation (serverip)
+
