@@ -1,6 +1,12 @@
 #!/bin/sh
-if [ -e /mnt/etc/ssh/sshd_config ]; then 
-    echo " - patching sshd_config for server root"
-    sed -i "s/\(AllowUsers \)\(.*\)/\1 root@$SERVERIP linuxadmin@$SERVERIP/" /mnt/etc/ssh/sshd_config
-    echo "      - done"
-fi
+# done in linuxmuster-client
+#if [ -e /mnt/etc/ssh/sshd_config ]; then 
+#    echo " - patching sshd_config for to allow login from root@$SERVERIP"
+#    if grep ^# /mnt/etc/ssh/sshd_config  | grep AllowUsers >/dev/null ; then
+#	echo "  + AllowUsers not in file: adding it"
+#	echo "AllowUsers root@$SERVERIP linuxadmin@SERVERIP" >> /mnt/etc/ssh/sshd_config
+#    else
+#	sed -i "s/\(AllowUsers \)\(.*\)/\1 root@$SERVERIP linuxadmin@$SERVERIP/" /mnt/etc/ssh/sshd_config
+#    fi
+#    echo "      - done"
+#fi
