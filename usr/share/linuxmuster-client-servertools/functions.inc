@@ -103,6 +103,8 @@ function is_image_available {
 # Listet die aktuell verfügbaren Online-Images auf
 # 
 function list_available_images {
+    echo "+++ Auflistung +++"
+
     desc_files=$(find $CACHE/ -name '*.meta')
     echo 
     echo -e "Imagename\tInfo"
@@ -121,6 +123,7 @@ function list_available_images {
 # @Argumente
 # $1 hardwareklasse
 # $2 Imagename
+# $3 patchklasse
 # @Anwendung
 # get_target_fileset myxenial xenial916
 #
@@ -130,7 +133,7 @@ function get_target_fileset {
     for key in desc info; do 
         TARGET_FILESET["$key"]=${CONF_LINBODIR}/$2.cloop.$key 
     done
-    TARGET_FILESET["client-dir"]=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$1/
+    TARGET_FILESET["client-dir"]=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$3/
 }
 
 #
@@ -178,10 +181,11 @@ function check_target_fileset {
 #
 # Hole alle Daten Download-Server
 # @Argumente
-# $1 Hardwareklasse
+# $1 lokale Hardwareklasse
 # $2 Remote Hardwareklasse
 #
 function get_remote_cloop {
+    echo "+++ Download +++"
 
     hwclass=${2}
     cd ${CACHE}/${hwclass}/
@@ -207,40 +211,6 @@ function get_remote_cloop {
         colorecho "red" "Failed"
     fi
 
-    get_target_fileset $1 $hwclass
-    get_source_fileset $hwclass
-    echo -n "Überprüfe bereits vorhandene Dateien: "
-    if check_target_fileset ; then
-	colorecho "green" "Success."
-    else
-	colorecho "red" "Failed."
-    fi
-
-    ## backup für die start.conf wird automatisch gemacht
-    STARTCONF=${TARGET_FILESET["startconf"]};
-    if [ -f $STARTCONF ]; then
-        echo "INFO: Sichere $STARTCONF nach ${STARTCONF}.$ts.autobackup"
-        cp $STARTCONF ${STARTCONF}.$ts.autobackup
-    fi
-    
-    ## backup für das Patchklassenverzeichnis
-    PATCHCLASS=$hwclass
-    if [ -d ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ]; then 
-        echo "INFO: Sichere das vorhandene Patchklassenverzeichnis"
-        echo "      ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS  nach"
-        echo "      ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup"
-        mv ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup
-    fi
-
-    for key in startconf cloop desc info client-dir; do 
-        echo -n "Kopiere ${SOURCE_FILESET[$key]} nach ${TARGET_FILESET[$key]}: "
-        if rsync -a --delete ${SOURCE_FILESET[$key]} ${TARGET_FILESET[$key]} ; then 
-            colorecho "green" "Success."
-        else 
-            colorecho "red" "Failed"
-        fi
-    done
-    
 }
 
 #
@@ -270,18 +240,53 @@ function set_password_to_postsync {
 
 #
 # @Argumente
-# $1  Hardwareklasse
-# $2  Name der cloop-Datei, die eingerichtet werden soll
+# $1 local patchclass
+# $2 local hwclass
+# $3 local cloop_name
+# $4 remotename
 #
 function configure_cloop {
 
-    CLOOP_NAME=${2%.cloop}
-    # Patchklasse = hostgroup
-    HOSTGROUP=${1}
-    echo "HW-Klasse: $HOSTGROUP"
-    PATCHCLASS=$HOSTGROUP
+    echo "+++ Konfiguration +++"
+    PATCHCLASS=$1
+    HWCLASS=$2
+    CLOOP_NAME=$3
+    remotename=$4
+    get_target_fileset $HWCLASS $CLOOP_NAME $PATCHCLASS
+    get_source_fileset $remotename
+    echo -n "Überprüfe bereits vorhandene Dateien: "
+    if check_target_fileset ; then
+	colorecho "green" "Success."
+    else
+	colorecho "red" "Failed."
+    fi
+    echo "HW-Klasse: $HWCLASS"
     echo "INFO: Patchklasse ist $PATCHCLASS"
-    STARTCONF=$CONF_LINBODIR/start.conf.$HOSTGROUP
+
+    ## backup für die start.conf wird automatisch gemacht
+    STARTCONF=${TARGET_FILESET["startconf"]};
+    if [ -f $STARTCONF ]; then
+        echo "INFO: Sichere $STARTCONF nach ${STARTCONF}.$ts.autobackup"
+        cp $STARTCONF ${STARTCONF}.$ts.autobackup
+    fi
+    
+    ## backup für das Patchklassenverzeichnis
+    if [ -d ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ]; then 
+        echo "INFO: Sichere das vorhandene Patchklassenverzeichnis"
+        echo "      ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS  nach"
+        echo "      ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup"
+        mv ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup
+    fi
+
+    for key in startconf cloop desc info client-dir; do 
+        echo -n "Kopiere ${SOURCE_FILESET[$key]} nach ${TARGET_FILESET[$key]}: "
+        if rsync -a --delete ${SOURCE_FILESET[$key]} ${TARGET_FILESET[$key]} ; then 
+            colorecho "green" "Success."
+        else 
+            colorecho "red" "Failed"
+        fi
+    done
+    
     # Gibt es das Cloop?
     if [ ! -e $CONF_LINBODIR/${CLOOP_NAME}.cloop ]; then 
         echo "Cloop Datei nicht gefunden: $CONF_LINBODIR/${CLOOP_NAME}.cloop"
@@ -289,9 +294,19 @@ function configure_cloop {
     fi
     echo "INFO: Cloop-Datei ist $CONF_LINBODIR/${CLOOP_NAME}.cloop"
 
+    # Netzwerksettings in den postsync-pfad
+    echo "INFO: Creating and sourcing /etc/linuxmuster-client/server.network.settings in the clients filesystem"
+    mkdir -p ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/
+    echo >  ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
+    for i in servername serverip basedn sambadomain domainname ; do
+	grep -e $i /var/lib/linuxmuster/setup.ini | sed "s/\ //g" >> ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
+    done
+    . ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
+    #v6: cp  /var/lib/linuxmuster/network.settings ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
+
     # start.conf sichern
     if [ ! -e $STARTCONF ]; then 
-        echo "WARNING: Keine start.conf für $HOSTGROUP gefunden"
+        echo "WARNING: Keine start.conf für $HWCLASS gefunden"
 	exit_error "Failed. Aborting."
     fi
     if [ -f $STARTCONF ]; then
@@ -302,7 +317,7 @@ function configure_cloop {
     # start.conf anpassen
     echo "INFO: Passe $STARTCONF an"
     sed -i "s/\(Server\s*\=\s*\) \(.*\)/\1 $serverip/" $STARTCONF
-    sed -i "s/\(Group\s*\=\s*\) \(.*\)/\1 $HOSTGROUP            #Hardwareklasse/" $STARTCONF
+    sed -i "s/\(Group\s*\=\s*\) \(.*\)/\1 $HWCLASS            #Hardwareklasse/" $STARTCONF
     sed -i "s/\(BaseImage\s*\=\s*\) \(.*\)/\1 ${CLOOP_NAME}.cloop/" $STARTCONF
 
     # Imageverteilung via rsync oder ist bittorrent enabled?
@@ -315,7 +330,7 @@ function configure_cloop {
     echo "INFO: Erstelle postsync aus Vorlage mit korrekter Patchklasse"
     POSTSYNC=$CONF_LINBODIR/${CLOOP_NAME}.cloop.postsync
     if [ -f $POSTSYNC ]; then
-	if diff $POSTSYNC $CONF_GENERIC_POSTSYNC >/dev/null; then
+	if ! diff $POSTSYNC $CONF_GENERIC_POSTSYNC/generic.postsync >/dev/null; then
 	    echo "WARNING: Sichere $POSTSYNC nach ${POSTSYNC}.$ts.autobackup"
             mv $POSTSYNC ${POSTSYNC}.$ts.autobackup
 	fi
@@ -329,7 +344,7 @@ function configure_cloop {
     for SRC in $CONF_GENERIC_POSTSYNC/generic.postsync.d/*[^~]; do
 	TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d/$(basename $SRC)
 	if [ -f $TARGET ]; then
-	    if diff $TARGET $SRC > /dev/null; then
+	    if ! diff $TARGET $SRC > /dev/null; then
 		echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
 		mv $TARGET $TARGET.$ts.autobackup~
 	    fi
@@ -343,13 +358,11 @@ function configure_cloop {
     SRC=$TEMPLATEDIR/etc_hosts
     mkdir -p $(dirname $TARGET)
     if [ -f $TARGET ]; then
-	if diff $TARGET $SRC > /dev/null; then
-	    echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
-	    mv $TARGET $TARGET.$ts.autobackup~
-	fi
+	echo " WARNUNG: Sichere $TARGET nach $TARGET.$ts.autobackup~"
+	mv $TARGET $TARGET.$ts.autobackup~
     fi
     cp -ar $SRC $TARGET
-    echo "  - configuring for this installation"
+    echo "  - konfiguriere für diese Installation"
     sed -i "s/DOMAINNAME/$domainname/g" $TARGET
     sed -i "s/\#SERVERIP/$serverip/g" $TARGET
 
@@ -360,16 +373,16 @@ function configure_cloop {
     SRC=/etc/ssh/sshd_config
     mkdir -p $(dirname $TARGET)
     if [ -f $TARGET ]; then
-	if diff $TARGET $SRC > /dev/null; then
+	if ! diff $TARGET $SRC > /dev/null; then
 	    echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
 	    mv $TARGET $TARGET.$ts.autobackup~
 	fi
     fi
     cp -ar $SRC $TARGET
     echo "  - patching sshd_config for to allow login from root@$serverip"
-    if grep ^# /mnt/etc/ssh/sshd_config  | grep AllowUsers >/dev/null ; then
+    if ! grep -v ^# $TARGET  | grep AllowUsers >/dev/null ; then
 	echo "  + AllowUsers not in file: adding it"
-	echo "AllowUsers root@$serverip linuxadmin@serverip" >> $TARGET
+	echo "AllowUsers root@$serverip linuxadmin@$serverip" >> $TARGET
     else
 	sed -i "s/\(AllowUsers \)\(.*\)/\1 root@$serverip linuxadmin@$serverip/" $TARGET
     fi
@@ -380,7 +393,7 @@ function configure_cloop {
     SRC=$TEMPLATEDIR/etc_fstab
     mkdir -p $(dirname $TARGET)
     if [ -f $TARGET ]; then
-	if diff $TARGET $SRC > /dev/null; then
+	if ! diff $TARGET $SRC > /dev/null; then
 	    echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
 	    mv $TARGET $TARGET.$ts.autobackup~
 	fi
@@ -393,23 +406,14 @@ function configure_cloop {
     SRC=$TEMPLATEDIR/etc_systemd_timesyncd.conf
     mkdir -p $(dirname $TARGET)
     if [ -f $TARGET ]; then
-	if diff $TARGET $SRC > /dev/null; then
+	if ! diff $TARGET $SRC > /dev/null; then
 	    echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
 	    mv $TARGET $TARGET.$ts.autobackup~
 	fi
     fi
     cp -ar $SRC $TARGET
-    echo "  - configuring for this installation"
+    echo "  - konfiguriere für diese Installation"
     sed -i "s/\#SERVERIP/$serverip/g" $TARGET
-
-    # Netzwerksettings in den postsync-pfad
-    echo "INFO: Creating /etc/linuxmuster-client/server.network.settings in the clients filesystem"
-    mkdir -p ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/
-    echo >  ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
-    for i in servername serverip basedn sambadomain domainname ; do
-	grep -e $i /var/lib/linuxmuster/setup.ini | sed "s/\ //g" >> ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
-    done
-    #v6: cp  /var/lib/linuxmuster/network.settings ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
 
     # Passworthash in den postsync-Baum schreiben
     echo "INFO: Setze Passwort für linuxadmin & co."
@@ -425,4 +429,33 @@ function configure_cloop {
     cp $SHAREDIR/10-local-example-fix-cups-client ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d
     
     colorecho "green" "Success"
+}
+
+#
+# @Argumente
+# $1  Patchklasse
+# $2  interactive=1|0
+#
+function cleanup {
+    PATCHCLASS=$1
+    INTERACTIVE=$2
+
+    echo "INFO: Cleaning up backup~ files in ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/ "
+    files=$(find ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/ -name \*~)
+    if [ -z "$files" ]; then
+	echo " - Nothing to cleanup"
+    else
+	if [ "x$INTERACTIVE" = "x1" ]; then
+	    echo $files
+	    echo " - Do you want to delete those files? (y/N)"
+	    read REPLY
+	    if [ "x$REPLY" = "xy" ]; then
+		find ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/ -name \*~ -exec rm \{\} \;
+	    fi
+	else
+	    echo " - deleting files"
+	    find ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/ -name \*~ -exec rm \{\} \;
+	fi
+    fi
+      
 }
