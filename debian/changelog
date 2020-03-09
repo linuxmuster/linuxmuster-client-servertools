@@ -1,4 +1,4 @@
-linuxmuster-client-servertools (0.9b) lmn-testing; urgency=medium
+linuxmuster-client-servertools (0.9c) lmn7-testing; urgency=medium
 
   [ Tobias Küchel ]
   * implementiere bessere Kommandozeile, implementiere cleanup
