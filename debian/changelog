@@ -1,6 +1,58 @@
+linuxmuster-client-servertools (0.9b) lmn-testing; urgency=medium
+
+  [ Tobias Küchel ]
+  * implementiere bessere Kommandozeile, implementiere cleanup
+  * fix some errors and typos in linuxmuster-mcpfd, add Version: proposal
+  * moved 02-lcst since we don't want it executed, since obsolete, when using linuxmuster-client
+  * add example file to postsyncdir, when using linuxmsuter-client
+  * fill example postsync.d-file with useful stuff: cups/client.conf and cups/printers.conf
+  * add template for etc/fstab etc/systemd/timesyncd.conf, add example postsync.d-file, change output behaviour to use less space
+  * create empty authorized_keys, backup when overwriting with templatefiles, patch relevant files already when using linuxmuster-client
+  * patch-sshd-config is done in linuxmuster-client once
+  * newer fstab-fix taken from community, generate-hosts down to only setting the hostname
+  * setup.ini convertion to bash-sourceable settings-file
+  * generic.postsync: make sure, ~-files will not be executed in postsync.d-files,
+  * make sure ~-files are generally not copied,
+  * make sure with an additional rsync --delete command, that removed
+  * postsync.d-files get removed in the cache
+  * generic postsync: export all variables to be present in postsync.d-files
+  * backup für das patchklassen-verzeichnis, erstelle Datei server.network.settings im client mit serverip und servername etc., -
+  * print_help nach linuxmuster-client, serverip wird vom Server gelesen, get_cloop für tar.bz2 package implementiert
+  * add force option, ask to continue, remove TEMPDIR otherwise
+  * Hilfe hinzugefügt, tar.bz2 erstellt, Meta-Informationen für linuxmuster-client
+  * changelog updated
+  * mcpfd: cd /srv/linbo zuerst, dann verwende exit_error
+  * funktion auseinandergenommen: is_available und list_available
+  * correct the caching directory, on download, only delete the contents of the directory
+  * remove sourcing of non-existing network.settings file, add as configuration variable (vorerst)
+  * add cache-file in debian-dir
+  in reverse order: oldest on top
+  * Added consolidate -H (remove -h)
+  * Added wget -c to continue downloads
+  * Added -f to force overwrite files
+  * Renamed the option -l to -p for password
+  * Hiding the option to set the password alone
+  * Added checking of the md5sums
+  * Removed update-available, unnecessary as command
+  * Rename variable HWCLASS to HOSTGROUP consistently
+  * Renamed exit1 to exit_error consistently
+  * Changed the copying of all ssh-keys to the client
+  * Changed the default password to "muster" analogous to the XEN-VMs
+  * Changed the encoding to utf-8
+  * changed linuxmuster-mcpfd behavior
+  * Added separate is_available function
+  * add dirs under usr/ to debian/dirs
+
+ -- Tobias Küchel <tobias@linuxmuster.net>  Sat, 07 Mar 2020 17:37:35 +0100
+
 linuxmuster-client-servertools (0.9) babo; urgency=low
 
+  [ Frank Schiebel ]
   * New branch for lmn v7
+
+  [ Tobias Küchel ]
+  * added pull requests from v6 here as well
+  * fix package dependency for linbo7
 
  -- Frank Schiebel <frank@linuxmuster.net>  Sun, 17 Nov 2019 08:25:57 +0100
 

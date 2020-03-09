@@ -1,107 +1,181 @@
 #!/bin/bash
 
-STARTCONF=$1
-TARGETNAME=$2
-TEMPDIR=$(mktemp -d -p .)
-#TEMPDIR=/tmp/tmp.eXgIKvgX7s
+# Konfiguration lesen
+. /etc/linuxmuster/client-servertools.conf || exit 1
+# Funtionen einbinden
+. /usr/share/linuxmuster-client-servertools/functions.inc || exit 1
 
-if [ "x$STARTCONF" == "x" ]; then 
-    echo "[ERROR] The start conf "
-    exit 1
+function print_help() {
+    cat <<End-of-help
+Anwendung:
+    $0 -s start.conf.hwclass -t newhwclass [-i "information"]
+
+         - Analysiert start.conf.hwclass in $CONF_LINBODIR 
+	 - Verwendet die angegebene newhwclass als neuen Namen für start.conf.newhwclass,
+           und als neuen Namen des Cloops im Paket
+         - Verwendet <information> als Zusatzinformation im Paket, oder entnimmt sie der start.conf
+
+         - Paketiert das ganze in den Zieldateien
+           $CONF_LINBODIR/newhwclass-clpkg.tar.bz2
+           $CONF_LINBODIR/newhwclass-clpkg.meta
+
+Optionen:
+    -f                      überschreibe die Zieldateien
+    -s <start.conf.hwclass> start.conf.hwclass, die verwendet wird.
+    -t <newhwclass>         so wird die Hardwareklasse und das cloop im Paket heißen.
+    -i "<information>"        Kurze Information über das Paket (z.B. Ubuntu-Version, Autor)
+
+End-of-help
+
+    rm -rf $TEMPDIR
+}
+
+FORCE=0
+INFORMATION=""
+# Optionen verarbeiten
+while getopts "fs:t:hi:" opt; do
+case $opt in
+    f)
+	FORCE=1
+	;;
+    s)
+	STARTCONF=$(basename $OPTARG)
+        ;;
+    t)
+	TARGETNAME=$OPTARG
+	;;
+    i)
+	INFORMATION="$OPTARG"
+	;;
+    \?)
+        print_help
+	exit 0
+        ;;
+    h)
+        print_help
+	exit 0
+        ;;
+esac
+done
+
+if [ "x$STARTCONF" == "x" ]; then
+    print_help
+    exit_error "[ERROR] no STARTCONF (-H) given"
 fi
-
 if [ "x$TARGETNAME" == "x" ]; then 
-    echo "[ERROR] A target name for the package has to be given."
-    exit 1
+    print_help
+    exit_error "[ERROR] A target name for the package has to be given."
 fi
 
+### got to linbo-dir, create tempdir, there, we assume to have enough space 
+cd $CONF_LINBODIR
+TEMPDIR=$(mktemp -d -p .)
 
-if [ ! -f $STARTCONF ]; then
-    echo "[ERROR] Cannot open $STARTCONF"
-    exit 1
+## check if all files and options are there
+if [ ! -f "$STARTCONF" ]; then
+    print_help
+    exit_error "[ERROR] The start conf $STARTCONF does not exist in $CONF_LINBODIR"
 fi
-
-
 NUMOS=$(grep "\[OS\]" $STARTCONF | wc -l)
-
 if [ $NUMOS -gt 1 ]; then 
-
-echo "[ERROR] $NUMOS OS definitions found in $STARTCONF" 
+    rm -rf $TEMPDIR
     cat <<MESSAGE
  Only a configuration with exactly one OS definition can be used to create
  a cloop package. Please change your start.conf accordingly.
 MESSAGE
-    exit 1
+    exit_error "[ERROR] $NUMOS OS definitions found in $STARTCONF" 
 fi
-
-CLOOP=$(grep ^BaseImage $STARTCONF | awk -F"=" '{print $2}' | xargs)
-IMAGE=$(grep ^Image $STARTCONF  | awk -F"=" '{print $2}' | xargs)
+CLOOP=$(grep ^BaseImage $STARTCONF | awk -F"=" '{print $2}' | sed 's/#.*//' | xargs)
+IMAGE=$(grep ^Image $STARTCONF  | awk -F"=" '{print $2}' | sed 's/#.*//' | xargs)
 POSTSYNC=${CLOOP}.postsync
-
 if [ "x$IMAGE" != "x" ]; then
-    echo "[ERROR] There is an rsync image in your config."
-    exit 1
+    rm -rf $TEMPDIR
+    exit_error "[ERROR] There is an rsync image in your config."
 fi
-
-
 if [ ! -f $POSTSYNC ]; then
-    echo "[ERROR] Cannot open $POSTSYNC"
-    exit 1
+    rm -rf $TEMPDIR
+    exit_error "[ERROR] Cannot open $POSTSYNC"
+fi
+if [ -f $TARGETNAME.clpkg.tar.bz2  -o -f $TARGETNAME.clpkg.meta ]; then
+    if [ $FORCE -eq 1 ]; then
+	echo "Will overwrite existing targetfiles: $CONF_LINBODIR/$TARGETNAME.clpkg.{meta,tar.bz2} "
+    else
+	rm -rf $TEMPDIR
+	exit_error "[ERROR] $CONF_LINBODIR/$TARGETNAME.clpkg.{meta,tar.bz2} exists, to overwrite use -f"
+    fi
 fi
 
+## get Patchclass
 PATCHCLASS=$(grep ^PATCHCLASS $POSTSYNC | awk -F"=" '{print $2}' | sed -e 's/"//g' )
-
-FilesToPack="${CLOOP} ${CLOOP}.info ${CLOOP}.desc"
-DirToPack="/var/linbo/linuxmuster-client/$PATCHCLASS"
-
 TarFile=${TARGETNAME}.tar
 HWCLASS=$(echo $STARTCONF | sed -e "s/start\.conf\.//")
-
-echo "Information:"
-echo " Cloop name:     $CLOOP"
-echo " Hardware class: $HWCLASS"
-echo " Patchclass:     $PATCHCLASS"
-echo 
-echo "Creating package..."
-
 STARTCONF_NEW=$(echo $STARTCONF | sed -e "s/$HWCLASS/$TARGETNAME/g")
 CLOOP_NEW=${TARGETNAME}.cloop
+if  [ -z "$INFORMATION" ]; then
+    INFORMATION=$(grep -e '^Description' $STARTCONF | awk -F"=" '{print $2}' | sed 's/#.*//' | xargs)
+fi
 
+echo "Information:"
+echo " Cloop name:     $CLOOP -> $CLOOP_NEW"
+echo " Hardware class: $HWCLASS -> $TARGETNAME"
+echo " Patchclass:     $PATCHCLASS -> $TARGETNAME"
+echo " start.conf:     $STARTCONF -> $STARTCONF_NEW"
+echo " Dir that will be packaged: ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/"
+echo " Additional Information: $INFORMATION"
+echo -n " Do you want to continue (may take a while) [Y/n]"
+read info
+if [ "x$info" = "xn" ]; then
+   rm -rf $TEMPDIR
+   exit 0
+fi
+echo "Creating package..."
+
+## start.conf
 echo " Adding $STARTCONF to package as $STARTCONF_NEW"
 cp $STARTCONF $TEMPDIR/$STARTCONF_NEW
 echo " Renaming cloop in $STARTCONF_NEW to $CLOOP_NEW"
 sed -i "s/$CLOOP/$CLOOP_NEW/g" $TEMPDIR/$STARTCONF_NEW
+## hwclass.cloop
 echo " Adding $CLOOP to package as $CLOOP_NEW"
 cp $CLOOP $TEMPDIR/$CLOOP_NEW
+## hwclass.cloop.info
 echo " Adding ${CLOOP}.info to package as ${CLOOP_NEW}.info"
 cp ${CLOOP}.info $TEMPDIR/${CLOOP_NEW}.info
+## hwclass.cloop.desc
 echo " Adding ${CLOOP}.desc to package as ${CLOOP_NEW}.desc"
 cp ${CLOOP}.desc $TEMPDIR/${CLOOP_NEW}.desc
-
+## linuxmuster-client/patchclass/*
 mkdir -p $TEMPDIR/linuxmuster-client/$TARGETNAME
 echo " Adding patchfiles to package"
 cp -r linuxmuster-client/$PATCHCLASS/* $TEMPDIR/linuxmuster-client/$TARGETNAME/
+## authorized_keys
+echo " Emptying linuxmuster-client/$TARGETNAME/common/root/.ssh/authorized_keys"
+mkdir -p $TEMPDIR/linuxmuster-client/$TARGETNAME/common/root/.ssh/
+echo > $TEMPDIR/linuxmuster-client/$TARGETNAME/common/root/.ssh/authorized_keys
 
 echo " Create tar-package"
 cd $TEMPDIR
-tar -cf ../$TARGETNAME.clpkg.tar . 
+tar -cjf ../$TARGETNAME.clpkg.tar.bz2 . 
 cd ..
 echo " Calculate package hash"
-md5sum $TARGETNAME.clpkg.tar > $TARGETNAME.clpkg.meta
+md5sum $TARGETNAME.clpkg.tar.bz2 > $TARGETNAME.clpkg.meta
+echo " Add Name and information"
+echo "#Name: $TARGETNAME" >> $TARGETNAME.clpkg.meta
+echo "#Info: $INFORMATION" >> $TARGETNAME.clpkg.meta
+echo "#Version: " >> $TARGETNAME.clpkg.meta
 rm -rf $TEMPDIR
+
 echo "done."
+echo
+echo "You might want to add some version information in the file ${CONF_LINBODIR}/$TARGETNAME.clpkg.meta."
+echo "Lines should begin with #"
 echo 
-echo "To publish this cloop to the comminuty, provide"
-echo "the files:"
+echo "To publish this cloop to the comminuty, provide the files"
 echo
-echo "  $TARGETNAME.clpkg.tar"
-echo "  $TARGETNAME.clpkg.meta"
+echo "  $CONF_LINBODIR/$TARGETNAME.clpkg.tar.bz2"
+echo "  $CONF_LINBODIR/$TARGETNAME.clpkg.meta"
 echo
-echo "to a maintainer who has write access to the"
-echo "download server."
-
-
-
+echo "to a maintainer who has write access to the download server."
 
 
 

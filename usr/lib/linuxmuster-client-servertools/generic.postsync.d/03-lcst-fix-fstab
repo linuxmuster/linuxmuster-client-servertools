@@ -1,21 +1,13 @@
 #!/bin/sh
 if [ -e /mnt/etc/fstab ]; then
-    echo " - fixing fstab"
-    swap_part=$(fdisk -l | grep swap | awk '{print $1}')
-    swap_fstab=$(grep swap /mnt/etc/fstab | awk '{print $1}')
-    if [ $swap_part != $swap_fstab ]; then
-            echo "      Swap:          $swap_part"
-            echo "      Swap in fstab: $swap_fstab"
-            sed -i "s|^\(.*\)\(none\s*swap\)\(.*\)|${swap_part} \2 \3|" /mnt/etc/fstab
-    fi
-    for i in $(grep ^/dev /mnt/etc/fstab | awk '{print $1}'); do
-        if [ ! -b $i ]; then
-                dev=$(echo $i | awk -F/ '{print $3}')
-                sed -i "/$dev/d" /mnt/etc/fstab
-        fi
-    done
+    echo -n " - fixing fstab: "
+    ROOT=$(sed ':a;N;$!ba;s/\n/;UMBRUCH;/g' $STARTCONF | sed 's/ //g'|sed 's/\[Partition\]/\n/g' | grep -i 'fstype=ext4' | sed 's/;UMBRUCH;/\n/g' | grep -i 'dev=/' | cut -d'=' -f2 | head -c20 | cut -d"#" -f1)
+    echo -n "root: $ROOT, "
+    sed -i "s#\#dummyroot#$ROOT#g" /mnt/etc/fstab
+    SWAP=$(sed ':a;N;$!ba;s/\n/;UMBRUCH;/g' $STARTCONF | sed 's/ //g'|sed 's/\[Partition\]/\n/g' | grep -i 'fstype=swap' | sed 's/;UMBRUCH;/\n/g' | grep -i 'dev=/' | cut -d'=' -f2 | head -c20 | cut -d"#" -f1)
+    echo -n "swap: $SWAP, "
+        sed -i "s#\#dummyswap#$SWAP#g" /mnt/etc/fstab
 
-
-    echo "      - done"
+    echo "done"
 fi
 

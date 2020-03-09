@@ -8,6 +8,6 @@ Standards-Version: 3.6.0
 Package: linuxmuster-client-servertools
 Architecture: all
 Conflicts: linuxmuster-client-auth
-Depends: linuxmuster-linbo, makepasswd
+Depends: linuxmuster-linbo7, makepasswd
 Description: linuxmuster serverside scripts for managing a community based ubuntu-cloop
 

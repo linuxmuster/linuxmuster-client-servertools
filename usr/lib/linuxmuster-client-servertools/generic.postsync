@@ -1,14 +1,14 @@
 echo "##### POSTSYNC BEGIN #####" 
-LOG=/mnt/var/log/postsync.log
+export LOG=/mnt/var/log/postsync.log
 echo "##### POSTSYNC BEGIN #####" >  $LOG
-NOW=$(date +%Y%m%d-%H%M)
+export NOW=$(date +%Y%m%d-%H%M)
 echo $NOW | tee -a $LOG
 
 # IP-Adresse des Servers
-SERVERIP=$(nslookup dummy 2> /dev/null | head -n 1 | awk -F: '{print $2}' | sed "s/\s*//g")
+export SERVERIP=$(nslookup dummy 2> /dev/null | head -n 1 | awk -F: '{print $2}' | sed "s/\s*//g")
 
 # Die Hostgruppe des aktuellen Rechners
-HOSTGROUP=$(hostgroup) 
+export HOSTGROUP=$(hostgroup) 
 
 # Raum feststellen. Dieses Skript geht davon aus
 # dass die Rechner Namen der Form
@@ -18,6 +18,7 @@ RAUM=${HOSTNAME%%-*}
 if [ "x${RAUM}" == "x" ]; then 
     RAUM="unknown"
 fi
+export RAUM
 
 # UVZ für die Patches auf dem Server. Mit dieser Variablen 
 # kann man verschiedene Patches, z.B. für unterschiedliche
@@ -26,11 +27,11 @@ fi
 # ein eigenes Patchklassenverzeichnis auf dem Server.
 # Damit kann man verschiedene Patchklassen mit derselben cloop-Datei
 # bedienen, wenn man das benötigt.
-PATCHCLASS="gruppe1"
+export PATCHCLASS="DUMMYPATCHCLASS"
 
 # Das Verzeichnis, in dem die Serverpatches
 # im lokalen Clientcache synchronisiert werden.
-PATCHCACHE=/linuxmuster-client/serverpatches
+export PATCHCACHE=/linuxmuster-client/serverpatches
 
 echo "" | tee -a $LOG
 echo "Hostname:      ${HOSTNAME}" | tee -a $LOG
@@ -49,7 +50,7 @@ echo " - getting patchfiles" | tee -a $LOG
 # HOSTNAME -> Rechnername
 # Verzeichnis anlegen, damit es sicher existiert
 mkdir -p /cache/${PATCHCACHE}
-rsync --delete --progress -lr "${SERVERIP}::linbo/linuxmuster-client/${PATCHCLASS}" "/cache/${PATCHCACHE}" | tee -a $LOG
+rsync --delete --progress --exclude "- *~" -lr "${SERVERIP}::linbo/linuxmuster-client/${PATCHCLASS}" "/cache/${PATCHCACHE}" | tee -a $LOG
 
 echo " - patching local files"  | tee -a $LOG
 
@@ -57,7 +58,10 @@ echo " - patching local files"  | tee -a $LOG
 # files
 if [ -d /cache/${PATCHCACHE}/${PATCHCLASS}/common ]; then 
     echo "   - patching common to /mnt" | tee -a $LOG
-    cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/common/* /mnt/ | tee -a $LOG
+      ## copy all files in common/*
+      cp -ar /cache/${PATCHCACHE}/${PATCHCLASS}/common/* /mnt/ | tee -a $LOG
+      ## rsync (with delete) all postsync.d-files
+      rsync --delete -lr /cache/${PATCHCACHE}/${PATCHCLASS}/common/postsync.d/ /mnt/postsync.d/ | tee -a $LOG
 fi
 
 # tarpacks
@@ -103,12 +107,12 @@ fi
 
 # Hook, um eigene Skripte auszuführen
 if [ -d /mnt/postsync.d ]; then
-    for SCRIPT in /mnt/postsync.d/*
+    for SCRIPT in /mnt/postsync.d/*[^~]
     do
         chmod 755 $SCRIPT
         echo "Executing: $SCRIPT" | tee -a $LOG
         #$SCRIPT > /dev/null 2>&1
-        $SCRIPT | tee -a $LOG
+        . $SCRIPT | tee -a $LOG
         echo " ...done." | tee -a $LOG
     done
     rm -rf /mnt/postsync.d
@@ -118,7 +122,13 @@ fi
 rm -rf /mnt/tarpacks
 
 # Zeitstempel letzter sync hinterlegen
-echo $NOW > /mnt/lastsync
+echo $NOW > /mnt/.lastsync
+# Hostgroup hinterlegen
+echo ${HOSTGROUP} > /mnt/.hostgroup
+# /mnt/.linbo wurde von Linbo hinterlegt
+image=$(cat /mnt/.linbo)
+# Image Beschreibung hinterlegen
+cp /cache/${image}.cloop.desc /mnt/.description
 
 echo "##### POSTSYNC END #####" | tee -a $LOG
 

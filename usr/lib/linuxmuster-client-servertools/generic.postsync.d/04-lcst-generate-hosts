@@ -1,16 +1,16 @@
 #!/bin/sh
 if [ -e /mnt/etc/hosts ]; then
-    echo " - fixing hosts"
-
-    # Die network.settings vom Server muss auf dem Client zur Verfügung stehen
-    . /mnt/etc/linuxmuster-client/server.network.settings
+    echo -n " - fixing hosts"
 
     HOSTS=/mnt/etc/hosts
-    echo "# Diese Datei wird beim postsync erzeugt." > ${HOSTS}
-    echo "127.0.0.1 ${HOSTNAME}" >> ${HOSTS}
-    echo "${serverip}  ${servername}.${domainname}  ${servername}" >> ${HOSTS}
-    echo "# damit CUPS zufrieden ist..." >> ${HOSTS}
-    echo "${serverip}  server.lokal server.local" >> ${HOSTS}
+    sed -i "s/HOSTNAME/$HOSTNAME/g" ${HOSTS}
 
-    echo "      - done"
+    echo "done"
 fi
+
+# done in linuxmuster-client
+# Die network.settings vom Server muss auf dem Client zur Verfügung stehen
+#. /mnt/etc/linuxmuster-client/server.network.settings
+#sed -i "s/DOMAINNAME/$domainname/g" ${HOSTS}
+#sed -i "s/\#SERVERIP/$serverip/g" ${HOSTS}
+

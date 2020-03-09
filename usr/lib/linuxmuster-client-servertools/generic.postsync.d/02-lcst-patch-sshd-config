@@ -1,6 +1,0 @@
-#!/bin/sh
-if [ -e /mnt/etc/ssh/sshd_config ]; then 
-    echo " - patching sshd_config for server root"
-    sed -i "s/\(AllowUsers \)\(.*\)/\1 root@$SERVERIP linuxadmin@$SERVERIP/" /mnt/etc/ssh/sshd_config
-    echo "      - done"
-fi

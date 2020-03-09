@@ -12,7 +12,9 @@
 # Funtionen einbinden
 . /usr/share/linuxmuster-client-servertools/functions.inc || exit 1
 # Netzwerkparameter linuxmuster.net
-. /var/lib/linuxmuster/network.settings || exit 1
+##v6 . /var/lib/linuxmuster/network.settings || exit 1
+##v7 /var/lib/linuxmuster/setup.ini
+##serverip=$(grep serverip /var/lib/linuxmuster/setup.ini | awk -F"=" '{gsub(/^[ \t]+/, "", $2); gsub(/[ \t]+$/, "", $2); print $2}' )
 
 # deklaration der globalen arrays
 declare -A TARGET_FILESET
@@ -21,84 +23,124 @@ declare -A SOURCE_FILESET
 # Sanity checks beim skriptstart
 check_startup
 
-PATCHCLASS_SET=0
-COMMONCLASS=""
+# 
+# Gibt einen Hilfetext aus
+#
+function print_help() {
+cat <<End-of-help
+Anwendung:
+    $0 list
+         Liste alle zur Verfügung stehenden Cloop-Pakete auf.
+
+    $0 -r <remotename> download
+         Lade folgendes Cloop-Paket herunter.
+
+    $0 [-f] [-p <pw>] [-l <localname>] -r <remotename> <configure|auto>
+        Im Paket heißen start.conf.remotename, remotename.cloop und linuxmuster-client/remotename gleich
+        "auto" und "configure" konfiguriert genauso lokal, außer es wird "-l" angegeben, dann wird der überall verwendet.
+
+	"auto" lädt auch noch vorher das Paket herunter, setzt danach das Passwort und räumt auf.
+
+    $0 [-p <pw>] -l <localname> setpw
+        Setze das Passwort in der Patchklasse linuxmuster-client/localname wie in der Konfigurationsdatei oder <pw> wenn angegeben.
+
+    $0 -l <localname> cleanup
+        Löscht ~-Dateien in der Patchklasse linuxmuster-client/localname
+
+#Optionen:
+#    -f                   überschreibe alle Dateien und fahre mit dem Download fort, autobackup start.conf
+
+End-of-help
+}
+
+
+PATCHCLASS=""
+LOCALNAME=""
+REMOTENAME=""
+HOSTGROUP=""
+LAPASS=""
+FORCE=0
 
 # Optionen verarbeiten
-while getopts ":a:c:p:l:H:" opt; do
-case $opt in
-    a)
-        ACTION=$OPTARG
-        ;;
-    c)
-        CLOOP_NAME=$OPTARG
-        ;;
-    p)	
-	PATCHCLASS_SET=1
-        PATCHCLASS=$OPTARG
-        ;;
-    l)
-	LAPASS=$OPTARG
-	;;
-    H)
-        HWCLASS=$OPTARG
-        ;;
-    \?)
-        print_help
-	exit 0
-        ;;
-esac
+#while getopts ":hla:c:fp:H:" opt; do
+while getopts "hfl:r:p:" opt; do
+    case $opt in
+	f)
+	    FORCE=1
+	    ;;
+	l)
+	    HOSTGROUP=$OPTARG
+	    PATCHCLASS=$OPTARG
+	    LOCALNAME=$OPTARG
+	    ;;
+	r)
+            REMOTENAME=$OPTARG
+            ;;
+	p)
+	    LAPASS=$OPTARG
+	    ;;
+	\? | h)
+            print_help
+	    exit 0
+            ;;
+    esac
 done
 
+shift $((OPTIND-1))
 
-case $ACTION in
-auto)
-    if [ "x$HWCLASS" == "x" ]; then 
-        exit_error "Die Option -H <hardwareklasse> muss angegeben werden."
-    fi
-    if [ "x$CLOOP_NAME" == "x" ]; then
-        exit_error "Die Option -c <CloopName> muss angegeben werden."
-    fi 
-
-    list_available_images $CLOOP_NAME || exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."
-
-    PATCHCLASS_SET=1
-    PATCHCLASS=$HWCLASS
-
-
-    # Cloop herunterladen
-    get_remote_cloop $HWCLASS $CLOOP_NAME
-    # Cloop konfigurieren
-    configure_cloop ${HWCLASS}.cloop
-
-    ;;
-get-cloop)
-    if [ "x$HWCLASS" == "x" ]; then 
-        exit_error "Die Option -H <hardwareklasse> muss angegeben werden."
-    fi
-    if [ "x$CLOOP_NAME" == "x" ]; then
-        exit_error "Die Option -c <CloopName> muss angegeben werden."
-    fi 
-    list_available_images $CLOOP_NAME || exit_error "Konnte kein Cloop mit dem angegebenen Namen ($CLOOP_NAME) finden."
-    get_remote_cloop $HWCLASS $CLOOP_NAME
-    ;;
-configure)
-    configure_cloop $CLOOP_NAME
-    ;;
-set-postsync-pass)
-    if [ $PATCHCLASS_SET -eq 0 ]; then 
-	PATCHCLASS=""
-    fi
-    set_password_to_postsync $PATCHCLASS
-    ;;
-update-available)
-    get_available_images
-    ;;
-list-available)
-    list_available_images
-    ;;
-*)
-    print_help
-    ;;
+case $@ in
+    list)
+	get_available_images
+	list_available_images
+	;;
+    download)
+	if [ "x$REMOTENAME" == "x" ]; then
+            exit_error "Die Option -r <remotename> muss angegeben werden. $0 list, um alle Möglichkeiten aufzulisten. $0 -h für weitere Hilfe."
+	fi 
+	# Hardwareklasse wird REMOTENAME verwendet, außer es wurde gesetzt
+	LOCALNAME=${LOCALNAME:-$REMOTENAME}
+	get_available_images
+	is_image_available $REMOTENAME || { list_available_images; exit_error "Konnte kein Cloop mit dem angegebenen Namen ($REMOTENAME) finden."; }
+	get_remote_cloop $LOCALNAME $REMOTENAME
+	;;
+    configure)
+	if [ "x$REMOTENAME" == "x" ]; then
+            exit_error "Die Option -r <remotename> muss angegeben werden. $0 list, um alle Möglichkeiten aufzulisten. $0 -h für weitere Hilfe."
+	fi 
+	# als LOCALNAME wird REMOTENAME verwendet, außer es wurde gesetzt
+	LOCALNAME=${LOCALNAME:-$REMOTENAME}
+	# simplifizierung: patchklasse, hwklasse und cloopname heißen gleich
+	configure_cloop ${LOCALNAME} ${LOCALNAME} ${LOCALNAME} ${REMOTENAME}
+	;;
+    auto)
+	if [ "x$REMOTENAME" == "x" ]; then
+            exit_error "Die Option -r <remotename> muss angegeben werden. $0 list, um alle Möglichkeiten aufzulisten. $0 -h für weitere Hilfe."
+	fi 
+	# als LOCALNAME wird REMOTENAME verwendet, außer es wurde gesetzt
+	LOCALNAME=${LOCALNAME:-$REMOTENAME}
+	get_available_images
+	is_image_available $REMOTENAME || { list_available_images; exit_error "Konnte kein Cloop mit dem angegebenen Namen ($REMOTENAME) finden."; }
+	# Cloop herunterladen
+	get_remote_cloop ${LOCALNAME} ${REMOTENAME}
+	# simplifizierung: patchklasse, hwklasse und cloopname heißen gleich
+	configure_cloop ${LOCALNAME} ${LOCALNAME} ${LOCALNAME} ${REMOTENAME}
+	# cleanup interactive
+	cleanup $LOCALNAME 1
+	;;
+    setpw)
+	if [ "x$LOCALNAME" == "x" ]; then
+            exit_error "Die Option -l <localname> muss angegeben werden. $0 -h für weitere Hilfe."
+	fi 
+	set_password_to_postsync $LOCALNAME
+	;;
+    cleanup)
+	if [ "x$LOCALNAME" == "x" ]; then
+            exit_error "Die Option -l <localname> muss angegeben werden. $0 -h für weitere Hilfe."
+	fi 
+	cleanup $LOCALNAME 0
+	;;
+    *)
+	print_help
+	;;
 esac
 
