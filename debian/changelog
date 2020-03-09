@@ -1,6 +1,8 @@
 linuxmuster-client-servertools (0.9b) lmn-testing; urgency=medium
 
   [ Tobias Küchel ]
+  * implementiere bessere Kommandozeile, implementiere cleanup
+  * fix some errors and typos in linuxmuster-mcpfd, add Version: proposal
   * moved 02-lcst since we don't want it executed, since obsolete, when using linuxmuster-client
   * add example file to postsyncdir, when using linuxmsuter-client
   * fill example postsync.d-file with useful stuff: cups/client.conf and cups/printers.conf
