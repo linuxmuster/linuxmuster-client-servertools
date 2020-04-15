@@ -299,11 +299,17 @@ function configure_cloop {
     echo "INFO: Creating and sourcing /etc/linuxmuster-client/server.network.settings in the clients filesystem"
     mkdir -p ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/
     echo >  ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
+    ## assume linuxmuster-base7 is only in v7, and linuxmuster-base is in all previous versions
+    #v6 was: cp  /var/lib/linuxmuster/network.settings ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
+    if dpkg -l linuxmuster-base7 >/dev/null 2>&1 ; then
+	settingsfile=/var/lib/linuxmuster/setup.ini
+    else
+	settingsfile=/var/lib/linuxmuster/network.settings
+    fi
     for i in servername serverip basedn sambadomain domainname ; do
-	grep -e $i /var/lib/linuxmuster/setup.ini | sed "s/\ //g" >> ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
+	grep -e $i $settingsfile | sed "s/\ //g" >> ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
     done
     . ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
-    #v6: cp  /var/lib/linuxmuster/network.settings ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/linuxmuster-client/server.network.settings
 
     # start.conf sichern
     if [ ! -e $STARTCONF ]; then 
