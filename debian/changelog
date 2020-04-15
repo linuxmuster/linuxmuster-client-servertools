@@ -1,12 +1,13 @@
 linuxmuster-client-servertools (0.9d) lmn7-testing; urgency=medium
 
-	[ Tobias Küchel ]
-	* moved all data-files to postsync.data.d and do a generic copy from the template
-	* replace serverip, servername, domainname etc. in all those template files
-	* rewrite parts of linuxmuster-client --help	
-	* remove non-generic permission-fixes to example file
-	* add conffiles for template files
-
+  [ Tobias Küchel ]
+  * moved all data-files to postsync.data.d and do a generic copy from the template
+  * replace serverip, servername, domainname etc. in all those template files
+  * rewrite parts of linuxmuster-client --help
+  * remove non-generic permission-fixes to example file
+  * add conffiles for template files
+  * add v6 and v7 support
+ 
  -- Tobias Küchel <tobias@linuxmuster.net>  Wed, 15 Apr 2020 01:43:01 +0200
 
 linuxmuster-client-servertools (0.9c) lmn7-testing; urgency=medium
