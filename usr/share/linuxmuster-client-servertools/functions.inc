@@ -383,9 +383,13 @@ function configure_cloop {
     }	
 
     for SRC in $TEMPLATEDIR/postsync.data.d/*[^~]; do
-	TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/$(head -n 1 $SRC | cut -d " " -f 2)
-	copy_template_to_postsyncdir
-	echo " Copying $SRC from template"
+	if echo $(basename $SRC) | grep -E '\.dpkg-old$|\.dpkg-new$|\.dpkg-dist$' ; then
+	    :
+	else
+	    TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/$(head -n 1 $SRC | cut -d " " -f 2)
+	    copy_template_to_postsyncdir
+	    echo " Copying $SRC from template"
+	fi
     done
 
     # Passworthash in den postsync-Baum schreiben
