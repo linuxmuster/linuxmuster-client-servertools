@@ -349,14 +349,18 @@ function configure_cloop {
     echo "INFO: Kopiere generische postsync.d-Dateien und passe sie an"
     mkdir -p ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d/
     for SRC in $CONF_GENERIC_POSTSYNC/generic.postsync.d/*[^~]; do
-	TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d/$(basename $SRC)
-	if [ -f $TARGET ]; then
-	    if ! diff $TARGET $SRC > /dev/null; then
-		echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
-		mv $TARGET $TARGET.$ts.autobackup~
+     	if echo $(basename $SRC) | grep -E '\.dpkg-old$|\.dpkg-new$|\.dpkg-dist$' ; then
+	    :
+	else
+	    TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d/$(basename $SRC)
+	    if [ -f $TARGET ]; then
+		if ! diff $TARGET $SRC > /dev/null; then
+		    echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
+		    mv $TARGET $TARGET.$ts.autobackup~
+		fi
 	    fi
+	    cp -ar $SRC $TARGET
 	fi
-	cp -ar $SRC $TARGET
     done
 
     # postsync-data-files aus Vorlage holen (+ autobackup) und ersetzen wichtiger Parameter
