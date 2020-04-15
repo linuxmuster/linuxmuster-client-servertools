@@ -152,6 +152,20 @@ cp -r linuxmuster-client/$PATCHCLASS/* $TEMPDIR/linuxmuster-client/$TARGETNAME/
 echo " Emptying linuxmuster-client/$TARGETNAME/common/root/.ssh/authorized_keys"
 mkdir -p $TEMPDIR/linuxmuster-client/$TARGETNAME/common/root/.ssh/
 echo > $TEMPDIR/linuxmuster-client/$TARGETNAME/common/root/.ssh/authorized_keys
+## removeing all files that come with the templates: generic.postsync.d
+for SRC in $CONF_GENERIC_POSTSYNC/generic.postsync.d/*[^~]; do
+    echo "removing $SRC in $TEMPDIR"
+    rm $TEMPDIR/linuxmuster-client/$TARGETNAME/common/postsync.d/$(basename $SRC)
+done
+## removeing all files that come with the templates: postsync.data.d
+for SRC in $CONF_GENERIC_POSTSYNC/postsync.data.d/*[^~]; do
+    echo "removing $SRC in $TEMPDIR"
+    rm $TEMPDIR/linuxmuster-client/$TARGETNAME/common/$(head -n 1 $SRC | cut -d " " -f 2)
+done
+## removing passwords file
+rm $TEMPDIR/linuxmuster-client/$TARGETNAME/common/passwords
+## removing /etc/linuxmuster-client/network.settings
+rm $TEMPDIR/linuxmuster-client/$TARGETNAME/common/etc/linuxmuster-client/server.network.settings
 
 echo " Create tar-package"
 cd $TEMPDIR
