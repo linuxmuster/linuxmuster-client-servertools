@@ -1,14 +1,15 @@
+# /etc/hosts
 # Diese Datei wird per postsync gepatcht. 
 # Pfad: ${linbodir}/${postsyncdir}/${patchclass}/common/etc/hosts -> /mnt/etc/hosts in LINBO
 
 ########## DO NOT EDIT START
 # HOSTNAME wird im Postsyncskript mit dem echten Namen gepatcht
 127.0.0.1 localhost
-127.0.0.1 HOSTNAME.DOMAINNAME HOSTNAME
+127.0.0.1 HOSTNAME.@@DOMAINNAME@@ HOSTNAME
 
 #Die nächste Zeile enthält die Hostnamen so, wie sie auf dem Server eingetragen sind...
-#SERVERIP server.DOMAINNAME server
+@@SERVERIP@@ server.@@DOMAINNAME@@ server
 
 ## damit CUPS zufrieden ist, muss noch diese Zeile hier dazu:
-#SERVERIP  server.lokal server.local
+@@SERVERIP@@  server.lokal server.local
 ########## DO NOT EDIT END
