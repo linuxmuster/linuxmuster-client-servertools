@@ -60,7 +60,7 @@ done
 
 if [ "x$STARTCONF" == "x" ]; then
     print_help
-    exit_error "[ERROR] no STARTCONF (-H) given"
+    exit_error "[ERROR] no STARTCONF (-s) given"
 fi
 if [ "x$TARGETNAME" == "x" ]; then 
     print_help
