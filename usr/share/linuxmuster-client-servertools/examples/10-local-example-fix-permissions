@@ -1,0 +1,13 @@
+#!/bin/sh
+
+echo " - fixing additional permissions"
+echo "   - sudoers.d/*"
+# /etc/sudoers.d/* rechte (z.B. veracrypt)
+chmod 440 /mnt/etc/sudoers.d/*
+
+linuxadminid=$(grep linuxadmin /mnt/etc/passwd | awk -F: '{print $3}')
+echo "   - /home/linuxadmin ($linuxadminid)"
+# Besitzverhältnisse für linuxadmin reparieren
+chown -R $linuxadminid:$linuxadminid /mnt/home/linuxadmin
+
+echo "   - done"

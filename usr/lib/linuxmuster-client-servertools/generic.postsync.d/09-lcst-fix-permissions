@@ -1,16 +1,6 @@
 #!/bin/sh
 
 echo " - fixing permissions"
-echo "   - sudoers.d/*"
-# /etc/sudoers.d/* rechte (z.B. veracrypt)
-chmod 440 /mnt/etc/sudoers.d/*
-
-linuxadminid=$(grep linuxadmin /mnt/etc/passwd | awk -F: '{print $3}')
-echo "   - /home/linuxadmin ($linuxadminid)"
-# Besitzverhältnisse für linuxadmin reparieren
-chown -R $linuxadminid:$linuxadminid /mnt/home/linuxadmin
-#chown -R 1001:1001 /mnt/home/linuxuser
-
 echo "   - /root/.ssh"
 chmod 700 /mnt/root/.ssh/
 chmod 600 /mnt/root/.ssh/authorized_keys
