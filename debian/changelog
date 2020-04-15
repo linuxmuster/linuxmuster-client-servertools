@@ -7,7 +7,11 @@ linuxmuster-client-servertools (0.9d) lmn7-testing; urgency=medium
   * remove non-generic permission-fixes to example file
   * add conffiles for template files
   * add v6 and v7 support
- 
+  * ignore dpkg-old, dpkg-dist and dpkg-new files on linuxmuster-client cp commands
+  * do not copy an example postsync.d file, just propose what could be done
+  * do not automatically check v7 or v6, leave it to the user in the conf-file
+  * correct linuxmuster-client --help
+
  -- Tobias Küchel <tobias@linuxmuster.net>  Wed, 15 Apr 2020 01:43:01 +0200
 
 linuxmuster-client-servertools (0.9c) lmn7-testing; urgency=medium
