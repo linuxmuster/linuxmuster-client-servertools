@@ -278,6 +278,7 @@ function configure_cloop {
         mv ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS.$ts.autobackup
     fi
 
+    cd ${CACHE}/${remotename}/
     for key in startconf cloop desc info client-dir; do 
         echo -n "Kopiere ${SOURCE_FILESET[$key]} nach ${TARGET_FILESET[$key]}: "
         if rsync -a --delete ${SOURCE_FILESET[$key]} ${TARGET_FILESET[$key]} ; then 
@@ -326,7 +327,7 @@ function configure_cloop {
         sed -i "s/\(DownloadType\s*\=\s*\) \(.*\)/\1 rsync/" $STARTCONF
     fi
 
-    # postsync evtl. aus vorlage holen
+    # generisches postsync aus vorlage holen (+ autobackup)
     echo "INFO: Erstelle postsync aus Vorlage mit korrekter Patchklasse"
     POSTSYNC=$CONF_LINBODIR/${CLOOP_NAME}.cloop.postsync
     if [ -f $POSTSYNC ]; then
@@ -338,9 +339,9 @@ function configure_cloop {
     cp $CONF_GENERIC_POSTSYNC/generic.postsync $POSTSYNC
     sed -i "s/\(PATCHCLASS\s*\=\s*\)\(.*\)/\1\"$PATCHCLASS\"/" $POSTSYNC
 
-    # postsync.d-files evtl aus Vorlage holen
+    # postsync.d-files aus Vorlage holen (+ autobackup)
     echo "INFO: Kopiere generische postsync.d-Dateien und passe sie an"
-    mkdir -p ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/
+    mkdir -p ${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d/
     for SRC in $CONF_GENERIC_POSTSYNC/generic.postsync.d/*[^~]; do
 	TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/postsync.d/$(basename $SRC)
 	if [ -f $TARGET ]; then
@@ -352,68 +353,30 @@ function configure_cloop {
 	cp -ar $SRC $TARGET
     done
 
-    ## etc/hosts
-    echo " Copying /etc/hosts from template"
-    TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/hosts
-    SRC=$TEMPLATEDIR/etc_hosts
-    mkdir -p $(dirname $TARGET)
-    if [ -f $TARGET ]; then
-	echo " WARNUNG: Sichere $TARGET nach $TARGET.$ts.autobackup~"
-	mv $TARGET $TARGET.$ts.autobackup~
-    fi
-    cp -ar $SRC $TARGET
-    echo "  - konfiguriere für diese Installation"
-    sed -i "s/DOMAINNAME/$domainname/g" $TARGET
-    sed -i "s/\#SERVERIP/$serverip/g" $TARGET
-
-
-    ## etc/ssh/sshd_config
-    echo " Copying common/etc/ssh/sshd_config from /etc/ssh/sshd_config, adding AllowUsers"
-    TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/ssh/sshd_config
-    SRC=/etc/ssh/sshd_config
-    mkdir -p $(dirname $TARGET)
-    if [ -f $TARGET ]; then
-	if ! diff $TARGET $SRC > /dev/null; then
-	    echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
-	    mv $TARGET $TARGET.$ts.autobackup~
+    # postsync-data-files aus Vorlage holen (+ autobackup) und ersetzen wichtiger Parameter
+    function copy_template_to_postsyncdir() {
+	mkdir -p $(dirname $TARGET)
+	if [ -f $TARGET ]; then
+	    if ! diff $TARGET $SRC > /dev/null; then
+		echo " WARNUNG: Sichere $TARGET nach $TARGET.$ts.autobackup~"
+		mv $TARGET $TARGET.$ts.autobackup~
+	    fi
 	fi
-    fi
-    cp -ar $SRC $TARGET
-    echo "  - patching sshd_config for to allow login from root@$serverip"
-    if ! grep -v ^# $TARGET  | grep AllowUsers >/dev/null ; then
-	echo "  + AllowUsers not in file: adding it"
-	echo "AllowUsers root@$serverip linuxadmin@$serverip" >> $TARGET
-    else
-	sed -i "s/\(AllowUsers \)\(.*\)/\1 root@$serverip linuxadmin@$serverip/" $TARGET
-    fi
+	cp -ar $SRC $TARGET
+	sed -i "s/@@SERVERIP@@/$serverip/g" $TARGET
+	sed -i "s/@@SERVERNAME@@/$servername/g" $TARGET
+	sed -i "s/@@DOMAINNAME@@/$domainname/g" $TARGET
+	sed -i "s/@@BASEDN@@/$basedn/g" $TARGET
+	sed -i "s/@@SAMBADOMAIN@@/$sambadomain/g" $TARGET
 
-    ## etc/fstab
-    echo " Copying /etc/fstab from template"
-    TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/fstab
-    SRC=$TEMPLATEDIR/etc_fstab
-    mkdir -p $(dirname $TARGET)
-    if [ -f $TARGET ]; then
-	if ! diff $TARGET $SRC > /dev/null; then
-	    echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
-	    mv $TARGET $TARGET.$ts.autobackup~
-	fi
-    fi
-    cp -ar $SRC $TARGET
+	sed -i "s/@@PATCHCLASS@@/$PATCHCLASS/g" $TARGET
+    }	
 
-    ## etc/systemd/timesyncd.conf
-    echo " Copying /etc/systemd/timesyncd.conf from template"
-    TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/etc/systemd/timesyncd.conf
-    SRC=$TEMPLATEDIR/etc_systemd_timesyncd.conf
-    mkdir -p $(dirname $TARGET)
-    if [ -f $TARGET ]; then
-	if ! diff $TARGET $SRC > /dev/null; then
-	    echo "WARNING: Sichere $TARGET nach $TARGET.$ts.autobackup~"
-	    mv $TARGET $TARGET.$ts.autobackup~
-	fi
-    fi
-    cp -ar $SRC $TARGET
-    echo "  - konfiguriere für diese Installation"
-    sed -i "s/\#SERVERIP/$serverip/g" $TARGET
+    for SRC in $TEMPLATEDIR/postsync.data.d/*[^~]; do
+	TARGET=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/$PATCHCLASS/common/$(head -n 1 $SRC | cut -d " " -f 2)
+	copy_template_to_postsyncdir
+	echo " Copying $SRC from template"
+    done
 
     # Passworthash in den postsync-Baum schreiben
     echo "INFO: Setze Passwort für linuxadmin & co."
