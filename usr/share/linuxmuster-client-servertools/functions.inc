@@ -78,7 +78,7 @@ function get_available_images {
     #    rm -rf /var/cache/linuxmuster/client-servertools/*
     #fi
     echo  -n "Hole Liste der verfügbaren cloops..."
-    wget --mirror -A.meta -np -P $CACHE $CONF_CLOOP_SERVER > /dev/null 2>&1 && colorecho "green" "OK"
+    wget --mirror -A.meta -np -nH --cut-dirs=2 -P $CACHE $CONF_CLOOP_SERVER > /dev/null 2>&1 && colorecho "green" "OK"
 }
 
 #
