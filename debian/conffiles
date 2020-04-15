@@ -1,0 +1,7 @@
+usr/lib/linuxmuster-client-servertools/generic.postsync
+usr/lib/linuxmuster-client-servertools/generic.postsync.d/00-lcst-fix-initrd
+usr/lib/linuxmuster-client-servertools/generic.postsync.d/01-lcst-setlocalpasswords
+usr/lib/linuxmuster-client-servertools/generic.postsync.d/03-lcst-fix-fstab
+usr/lib/linuxmuster-client-servertools/generic.postsync.d/04-lcst-generate-hosts
+usr/lib/linuxmuster-client-servertools/generic.postsync.d/09-lcst-fix-permissions
+
