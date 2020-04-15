@@ -8,9 +8,5 @@ if [ -e /mnt/etc/hosts ]; then
     echo "done"
 fi
 
-# done in linuxmuster-client
-# Die network.settings vom Server muss auf dem Client zur Verfügung stehen
-#. /mnt/etc/linuxmuster-client/server.network.settings
-#sed -i "s/DOMAINNAME/$domainname/g" ${HOSTS}
-#sed -i "s/\#SERVERIP/$serverip/g" ${HOSTS}
+
 
