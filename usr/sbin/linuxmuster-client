@@ -36,19 +36,21 @@ Anwendung:
          Lade folgendes Cloop-Paket herunter.
 
     $0 [-f] [-p <pw>] [-l <localname>] -r <remotename> <configure|auto>
-        Im Paket heißen start.conf.remotename, remotename.cloop und linuxmuster-client/remotename gleich
-        "auto" und "configure" konfiguriert genauso lokal, außer es wird "-l" angegeben, dann wird der überall verwendet.
+        -f   überschreibe alle Dateien und fahre mit dem Download fort, autobackup start.conf
+        -p   Setze das Passwort des linuxadmin auf das angegebene
+	-l   Lokal wird genau wie im Paket start.conf.remotename, remotename.cloop und linuxmuster-client/remotename verwendet,
+             außer es wird "-l" angegeben, dann wird localname überall verwendet.
+	-r   remote cloop-name
 
-	"auto" lädt auch noch vorher das Paket herunter, setzt danach das Passwort und räumt auf.
+	"configure" stellt etc/fstab, etc/hosts, etc/systemd/timesyncd.conf und /etc/ssh/sshd_config richtig ein.
+
+	"auto" lädt zusätzlich noch vorher das Paket herunter, setzt danach das Passwort und räumt auf.
 
     $0 [-p <pw>] -l <localname> setpw
         Setze das Passwort in der Patchklasse linuxmuster-client/localname wie in der Konfigurationsdatei oder <pw> wenn angegeben.
 
     $0 -l <localname> cleanup
         Löscht ~-Dateien in der Patchklasse linuxmuster-client/localname
-
-#Optionen:
-#    -f                   überschreibe alle Dateien und fahre mit dem Download fort, autobackup start.conf
 
 End-of-help
 }
