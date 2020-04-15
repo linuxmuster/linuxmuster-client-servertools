@@ -1,14 +1,18 @@
 echo "##### POSTSYNC BEGIN #####" 
-export LOG=/mnt/var/log/postsync.log
+LOG=/mnt/var/log/postsync.log
+export LOG
 echo "##### POSTSYNC BEGIN #####" >  $LOG
-export NOW=$(date +%Y%m%d-%H%M)
+NOW=$(date +%Y%m%d-%H%M)
+export NOW
 echo $NOW | tee -a $LOG
 
 # IP-Adresse des Servers
-export SERVERIP=$(nslookup dummy 2> /dev/null | head -n 1 | awk -F: '{print $2}' | sed "s/\s*//g")
+SERVERIP=$(nslookup dummy 2> /dev/null | head -n 1 | awk -F: '{print $2}' | sed "s/\s*//g")
+export SERVERIP
 
 # Die Hostgruppe des aktuellen Rechners
-export HOSTGROUP=$(hostgroup) 
+HOSTGROUP=$(hostgroup)
+export HOSTGROUP
 
 # Raum feststellen. Dieses Skript geht davon aus
 # dass die Rechner Namen der Form
@@ -27,11 +31,13 @@ export RAUM
 # ein eigenes Patchklassenverzeichnis auf dem Server.
 # Damit kann man verschiedene Patchklassen mit derselben cloop-Datei
 # bedienen, wenn man das benötigt.
-export PATCHCLASS="DUMMYPATCHCLASS"
+PATCHCLASS="DUMMYPATCHCLASS"
+export PATCHCLASS
 
 # Das Verzeichnis, in dem die Serverpatches
 # im lokalen Clientcache synchronisiert werden.
-export PATCHCACHE=/linuxmuster-client/serverpatches
+PATCHCACHE=/linuxmuster-client/serverpatches
+export PATCHCACHE
 
 echo "" | tee -a $LOG
 echo "Hostname:      ${HOSTNAME}" | tee -a $LOG
