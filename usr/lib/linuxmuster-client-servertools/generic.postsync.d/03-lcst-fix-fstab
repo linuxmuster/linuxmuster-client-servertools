@@ -5,11 +5,30 @@ FSTAB=/mnt/etc/fstab
 
 if [ -e $FSTAB ]; then
     echo -n " - fixing fstab: "
-    echo -n "root: $ROOTDEV, "
-    sed -i "s#\#dummyroot#$ROOTDEV#g" $FSTAB
+
+    ## TODO: use labels if defined
+    ROOT=$rootdev
+    # partlabel_startconf /dev/sda1 usw
+    echo -n "root: $ROOT, "
+    if grep ^\#dummyroot $FSTAB >/dev/null ; then
+	# try using replacement of "#dummyroot"
+	sed -i "s#\#dummyroot#$ROOT#g" $FSTAB
+    else
+	# try patching a regular fstab file
+	patch_fstab $rootdev
+    fi
+
+    ## TODO: use labels if defined
     SWAP=$(sed ':a;N;$!ba;s/\n/;UMBRUCH;/g' $STARTCONF | sed 's/ //g'|sed 's/\[Partition\]/\n/g' | grep -i 'fstype=swap' | sed 's/;UMBRUCH;/\n/g' | grep -i 'dev=/' | cut -d'=' -f2 | head -c20 | cut -d"#" -f1)
     echo -n "swap: $SWAP, "
-    sed -i "s#\#dummyswap#$SWAP#g" $FSTAB
+    if grep ^\#dummyswap $FSTAB >/dev/null; then
+	# try using replacement of "#dummyswap"
+	sed -i "s#\#dummyswap#$SWAP#g" $FSTAB
+    else
+	# try patching a regular fstab file
+	# fixme
+	pass
+    fi
 
     echo "done"
 fi
