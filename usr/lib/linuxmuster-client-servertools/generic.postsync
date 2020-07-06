@@ -7,7 +7,8 @@ export NOW
 echo $NOW | tee -a $LOG
 
 # IP-Adresse des Servers
-SERVERIP=$(nslookup dummy 2> /dev/null | head -n 1 | awk -F: '{print $2}' | sed "s/\s*//g")
+#SERVERIP=$(nslookup dummy 2> /dev/null | head -n 1 | awk -F: '{print $2}' | sed "s/\s*//g")
+SERVERIP=${siaddr}
 export SERVERIP
 
 # Die Hostgruppe des aktuellen Rechners
@@ -24,7 +25,7 @@ if [ "x${RAUM}" == "x" ]; then
 fi
 export RAUM
 
-# UVZ für die Patches auf dem Server. Mit dieser Variablen 
+# Unterverzeichnis für die Patches auf dem Server. Mit dieser Variablen 
 # kann man verschiedene Patches, z.B. für unterschiedliche
 # Linux-Versionen bereitstellen.
 # Wenn man hier $HOSTGROUP einträgt, erhält jede Rechnerklasse 
@@ -118,7 +119,7 @@ if [ -d /mnt/postsync.d ]; then
         chmod 755 $SCRIPT
         echo "Executing: $SCRIPT" | tee -a $LOG
         #$SCRIPT > /dev/null 2>&1
-        . $SCRIPT | tee -a $LOG
+        source $SCRIPT | tee -a $LOG
         echo " ...done." | tee -a $LOG
     done
     rm -rf /mnt/postsync.d
