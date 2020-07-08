@@ -4,7 +4,7 @@ usr/lib/linuxmuster-client-servertools/generic.postsync.d/01-lcst-setlocalpasswo
 usr/lib/linuxmuster-client-servertools/generic.postsync.d/03-lcst-fix-fstab
 usr/lib/linuxmuster-client-servertools/generic.postsync.d/04-lcst-generate-hosts
 usr/lib/linuxmuster-client-servertools/generic.postsync.d/09-lcst-fix-permissions
-usr/lib/linuxmuster-client-servertools/postsync.data.d/etc_fstab 
+usr/lib/linuxmuster-client-servertools/postsync.data.d/etc_fstab
 usr/lib/linuxmuster-client-servertools/postsync.data.d/etc_hosts
 usr/lib/linuxmuster-client-servertools/postsync.data.d/etc_ssh_sshd_config
 
