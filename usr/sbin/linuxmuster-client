@@ -40,13 +40,16 @@ Anwendung:
 
 	"configure" stellt etc/fstab, etc/hosts, etc/systemd/timesyncd.conf und /etc/ssh/sshd_config richtig ein und setzt danach das Passwort für linuxadmin
 
-	"auto" lädt zusätzlich noch vorher das Paket herunter und räumt danach auf.
+	"auto" lädt zusätzlich noch vorher das Paket herunter und löscht danach ~-Dateien in der Patchklasse linuxmuster-client/localname.
 
     $0 [-p <pw>] -l <localname> setpw
         Setze das Passwort in der Patchklasse linuxmuster-client/localname wie in der Konfigurationsdatei oder <pw> wenn angegeben.
 
     $0 -l <localname> cleanup
         Löscht ~-Dateien in der Patchklasse linuxmuster-client/localname
+
+    $0  wipecache
+        Löscht alle heruntergeladenen Dateien in $CACHE
 
 End-of-help
 }
@@ -123,7 +126,7 @@ case $@ in
 	# simplifizierung: patchklasse, hwklasse und cloopname heißen gleich
 	configure_cloop ${LOCALNAME} ${LOCALNAME} ${LOCALNAME} ${REMOTENAME}
 	# cleanup interactive
-	cleanup $LOCALNAME 1
+	cleanup_patchclass $LOCALNAME 0
 	;;
     setpw)
 	if [ "x$LOCALNAME" == "x" ]; then
@@ -135,7 +138,10 @@ case $@ in
 	if [ "x$LOCALNAME" == "x" ]; then
             exit_error "Die Option -l <localname> muss angegeben werden. $0 -h für weitere Hilfe."
 	fi 
-	cleanup $LOCALNAME 0
+	cleanup_patchclass $LOCALNAME 1
+	;;
+    wipecache)
+	cleanup_cache
 	;;
     *)
 	print_help

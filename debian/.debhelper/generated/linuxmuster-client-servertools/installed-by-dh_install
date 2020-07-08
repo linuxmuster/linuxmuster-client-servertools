@@ -1,0 +1,5 @@
+./usr/sbin/linuxmuster-client
+./usr/sbin/linuxmuster-mcpfd
+./usr/lib/linuxmuster-client-servertools
+./usr/share/linuxmuster-client-servertools
+./etc/linuxmuster

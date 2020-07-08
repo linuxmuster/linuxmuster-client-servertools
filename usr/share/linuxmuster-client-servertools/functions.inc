@@ -8,7 +8,7 @@
 # Tobias Küchel <tobias|linuxmuster.net>
 
 ts=$(date +%Y%m%d-%H%M%S)
-CACHE=/var/cache/linuxmuster/client-servertools
+CACHE=/srv/linbo/linuxmuster-client/servertools-cache
 TEMPLATEDIR=/usr/lib/linuxmuster-client-servertools
 SHAREDIR=/usr/share/linuxmuster-client-servertools/examples/
 
@@ -74,9 +74,6 @@ function check_startup {
 # Aktualisiert die Liste der aktuell verfügbaren Online-Image
 # 
 function get_available_images {
-    #if [ -d /var/cache/linuxmuster/client-servertools/ ]; then 
-    #    rm -rf /var/cache/linuxmuster/client-servertools/*
-    #fi
     echo  -n "Hole Liste der verfügbaren cloops..."
     wget --mirror -A.meta -np -nH --cut-dirs=2 -P $CACHE $CONF_CLOOP_SERVER > /dev/null 2>&1 && colorecho "green" "OK"
 }
@@ -406,7 +403,7 @@ function configure_cloop {
 # $1  Patchklasse
 # $2  interactive=1|0
 #
-function cleanup {
+function cleanup_patchclass {
     PATCHCLASS=$1
     INTERACTIVE=$2
 
@@ -429,3 +426,21 @@ function cleanup {
     fi
       
 }
+
+#
+# @Argumente
+#
+function cleanup_cache {
+    echo "INFO: Cleaning up download cache"
+    files=$(find ${CACHE} -type f )
+    if [ -z "$files" ]; then
+	echo " - Nothing to cleanup"
+    else
+	if [ -d $CACHE ]; then 
+	    echo " - deleting files"
+	    rm -rf $CACHE/*
+	fi
+    fi
+      
+}
+
