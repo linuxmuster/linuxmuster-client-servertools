@@ -1,3 +1,16 @@
+linuxmuster-client-servertools (0.9e) lmn7-testing; urgency=medium
+
+  * add wipecache as an option to linuxmuster-client
+  * set CACHE to /srv/linbo/linuxmuster-client/servertools-cache/ to avoid full disk on /, make transistion (copying) possible
+  * source postsync.d-scripts instead of executed, beware of the change
+  * quickfix for #12 : use $ROOTDEV=$rootdev
+  * change default password to Muster!
+  * remove CONF_GENERIC_POSTSYNC and CONF_POSTSYNCDIR from configuration file, make /etc/linuxmuster/client-servertools.conf a conffile
+  * add  version, minsize, pkgsize information to meta-information
+  * changed maintainership in control file
+
+ -- Tobias Küchel <devel@zukuul.de>  Wed, 08 Jul 2020 23:39:57 +0200
+
 linuxmuster-client-servertools (0.9d) lmn7-testing; urgency=medium
 
   [ Tobias Küchel ]
