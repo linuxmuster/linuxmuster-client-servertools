@@ -12,7 +12,7 @@ ts=$(date +%Y%m%d-%H%M%S)
 # Konfiguration lesen
 . /etc/linuxmuster/client-servertools.conf || exit 1
 
-# Subdir for the postsync patches 
+# Subdir for the postsync patches
 CONF_POSTSYNCDIR="linuxmuster-client"
 CACHE=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/servertools-cache
 CONF_GENERIC_POSTSYNC=/usr/lib/linuxmuster-client-servertools
@@ -73,7 +73,7 @@ function check_startup {
 
     # Gibt es das linbo-Verzeichnis?
     if [[ ! -d ${CONF_LINBODIR} ]]; then
-        exit_error "Das angegebene Linboverzeichnis existiert nicht. Abbruch"
+        exit_error "Das angegebene Linboverzeichnis ${CONF_LINBODIR} existiert nicht. Abbruch."
     fi
 }
 
