@@ -1,0 +1,34 @@
+#!/bin/bash
+set -e
+
+oldcache=/var/cache/linuxmuster/client-servertools
+newcache=/srv/linbo/linuxmuster-client/servertools-cache
+
+## on upgrade or install
+if [ "$1" == "upgrade" -o "$1" == "install" ]; then
+    if [ -d "$oldcache" ] ; then	
+	if [ -d "$newcache" ] ; then
+            x=1
+	else
+	    echo -n "Create new cache directory: "
+	    mkdir -p $newcache &&  { echo "succeeded."; } || { echo "failed. not good"; }
+	fi
+        ## try to move directory
+	echo "Copying files from old Cache to new:"
+	/usr/bin/rsync -aP $oldcache/ $newcache/ || { echo "failed. bad."; rsyncfailed=1; }
+
+	if [ -z "$rsyncfailed" ]; then
+	    ## we may remove the files on the oldcache
+	    echo "Removing files in oldcache"
+	    if [ -n "$oldcache" ]; then
+		rm -rf $oldcache
+	    fi
+	else
+	    echo "Rsync failed, not removing the old cache."
+	    echo "if this failes repeatedly, please move manually data from $oldcache to $newcache"
+	fi
+    else 
+	# no oldcache: all well
+	echo "You have no files in the oldcache. That's good."
+    fi
+fi
