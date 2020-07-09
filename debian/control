@@ -1,7 +1,7 @@
 Source: linuxmuster-client-servertools
 Section: debian-linuxmuster
 Priority: optional
-Maintainer: Frank Schiebel <frank@linuxmuster.net>
+Maintainer: Tobias Küchel <devel@zukuul.de>
 Build-Depends: debhelper (>= 4.0.0)
 Standards-Version: 3.6.0
 
