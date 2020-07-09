@@ -8,9 +8,16 @@
 # Tobias Küchel <tobias|linuxmuster.net>
 
 ts=$(date +%Y%m%d-%H%M%S)
-CACHE=/srv/linbo/linuxmuster-client/servertools-cache
-TEMPLATEDIR=/usr/lib/linuxmuster-client-servertools
+
+# Konfiguration lesen
+. /etc/linuxmuster/client-servertools.conf || exit 1
+
+# Subdir for the postsync patches 
+CONF_POSTSYNCDIR="linuxmuster-client"
+CACHE=${CONF_LINBODIR}/${CONF_POSTSYNCDIR}/servertools-cache
+CONF_GENERIC_POSTSYNC=/usr/lib/linuxmuster-client-servertools
 SHAREDIR=/usr/share/linuxmuster-client-servertools/examples/
+
 
 #
 # Farbige Ausgabe
@@ -372,7 +379,7 @@ function configure_cloop {
 	sed -i "s/@@PATCHCLASS@@/$PATCHCLASS/g" $TARGET
     }	
 
-    for SRC in $TEMPLATEDIR/postsync.data.d/*[^~]; do
+    for SRC in $CONF_GENERIC_POSTSYNC/postsync.data.d/*[^~]; do
 	if echo $(basename $SRC) | grep -E '\.dpkg-old$|\.dpkg-new$|\.dpkg-dist$' ; then
 	    :
 	else
