@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e 
+
+oldcache=/var/cache/linuxmuster/client-servertools
+newcache=/srv/linbo/linuxmuster-client/servertools-cache
+
+if [ "$1" == "remove" ]; then
+    ## probably never being called
+    if [ -d "$oldcache" ]; then
+	echo "Removing old cache"
+	rm -rf $oldcache || true
+    fi
+    ## remove the cache before uninstalling
+    if [ -d "$newcache" ]; then
+	echo "Wiping new cache"
+	linuxmuster-client wipecache
+    fi
+fi
