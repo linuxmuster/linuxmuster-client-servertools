@@ -178,7 +178,8 @@ echo "#Name: $TARGETNAME" >> $TARGETNAME.clpkg.meta
 echo "#Info: $INFORMATION" >> $TARGETNAME.clpkg.meta
 echo "#Version: $(date +%Y%m%d)" >> $TARGETNAME.clpkg.meta
 echo "#Minsize: $(grep partitionsize $TEMPDIR/${CLOOP_NEW}.info | awk '{split($0,a,"="); printf("~%0.0fG (%d kB)\n",a[2]/1024/1024,a[2]);}')" >> $TARGETNAME.clpkg.meta
-echo "#Pkgsize: $(ls -sh ../$TARGETNAME.clpkg.tar.bz2|cut -d " " -f 1)" >> $TARGETNAME.clpkg.meta
+echo "#Pkgsize: $(ls -sh $TARGETNAME.clpkg.tar.bz2|cut -d " " -f 1)" >> $TARGETNAME.clpkg.meta
+echo "#Maintainer: unknown_please_enter_your_Name_in_ask" >> $TARGETNAME.clpkg.meta
 rm -rf $TEMPDIR
 
 echo "done."
