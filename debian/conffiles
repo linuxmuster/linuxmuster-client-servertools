@@ -1,3 +1,4 @@
+etc/linuxmuster/client-servertools.conf
 usr/lib/linuxmuster-client-servertools/generic.postsync
 usr/lib/linuxmuster-client-servertools/generic.postsync.d/00-lcst-fix-initrd
 usr/lib/linuxmuster-client-servertools/generic.postsync.d/01-lcst-setlocalpasswords
