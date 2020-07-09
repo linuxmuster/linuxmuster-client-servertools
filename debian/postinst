@@ -8,13 +8,13 @@ if [ "$1" == "configure" ]; then
 
     ## handle configuration file changes from <=0.9d to later versions
     source /etc/linuxmuster/client-servertools.conf || true
-    if [ -z "$CONF_GENERIC_POSTSYNC" ]; then
+    if [ -n "$CONF_GENERIC_POSTSYNC" ]; then
 	echo "Disableing CONF_GENERIC_POSTSYNC, since it is now hardcoded and not configurable"
-	sed -i "s/CONF_GENERIC_POSTSYNC/#CONF_GENERIC_POSTSYNC/" /etc/linuxmuster/client-servertools.conf || true
+	sed -i "s/CONF_GENERIC_POSTSYNC/#disabled by packagemaintainer: CONF_GENERIC_POSTSYNC/" /etc/linuxmuster/client-servertools.conf || true
     fi
-    if [ -z "$CONF_POSTSYNCDIR" ]; then
+    if [ -n "$CONF_POSTSYNCDIR" ]; then
 	echo "Disableing CONF_POSTSYNCDIR, since it is now hardcoded and not configurable"
-	sed -i "s/CONF_POSTSYNCDIR/#CONF_POSTSYNCDIR/" /etc/linuxmuster/client-servertools.conf || true
+	sed -i "s/CONF_POSTSYNCDIR/#disabled by packagemaintainer: CONF_POSTSYNCDIR/" /etc/linuxmuster/client-servertools.conf || true
     fi
 fi
 
