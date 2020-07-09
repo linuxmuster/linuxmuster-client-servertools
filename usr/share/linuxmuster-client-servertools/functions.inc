@@ -111,14 +111,23 @@ function list_available_images {
 
     desc_files=$(find $CACHE/ -name '*.meta')
     echo 
-    echo -e "Imagename\tInfo"
     echo "-----------------------------------------------"
     for desc in $desc_files; do
         name=$(grep ^#Name: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
         info=$(grep ^#Info: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
-        echo -e "$name\t$info"
+        version=$(grep ^#Version: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+        hddsize=$(grep ^#Minsize: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")
+        pkgsize=$(grep ^#Pkgsize: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")	
+        maintainer=$(grep ^#Maintainer: $desc | awk -F: '{print $2}' | sed "s/^[ \t]*//")			
+	echo "       Remotename: $name"
+	echo "          Version: $version"
+	echo "             Info: $info"
+	echo "Min. size on disk: $hddsize"
+	echo "    Download size: $pkgsize"
+	echo "Whom to ask in ask.linuxmuster.net: $maintainer"
+	echo "-----------------------------------------------"
+	#echo -e "$name\tv$version\t$info"
     done
-    echo "-----------------------------------------------"
     echo 
 }
 
