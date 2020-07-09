@@ -6,6 +6,8 @@ newcache=/srv/linbo/linuxmuster-client/servertools-cache
 
 ## on upgrade or install
 if [ "$1" == "upgrade" -o "$1" == "install" ]; then
+
+    ## handle cache transition from <=v0.9d to later version
     if [ -d "$oldcache" ] ; then	
 	if [ -d "$newcache" ] ; then
             x=1
@@ -31,4 +33,5 @@ if [ "$1" == "upgrade" -o "$1" == "install" ]; then
 	# no oldcache: all well
 	echo "You have no files in the oldcache. That's good."
     fi
+
 fi
